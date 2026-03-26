@@ -25,6 +25,7 @@ export default function GenerusPage() {
   
   // New Filter states
   const [userRole, setUserRole] = useState("");
+  const [userName, setUserName] = useState("");
   const [statusNikahFilter, setStatusNikahFilter] = useState("all");
   const [kategoriFilter, setKategoriFilter] = useState("all");
   const [desaFilter, setDesaFilter] = useState("");
@@ -41,6 +42,7 @@ export default function GenerusPage() {
   useEffect(() => {
     fetch("/api/profile").then(r => r.json()).then(data => {
       setUserRole(data.role || "");
+      setUserName(data.nama || "");
       if (["admin", "pengurus_daerah", "kmm_daerah"].includes(data.role)) {
         fetch("/api/admin/desa").then(r => r.json()).then(setDesas);
         fetch("/api/admin/kelompok").then(r => r.json()).then(setKelompoks);
@@ -431,7 +433,7 @@ export default function GenerusPage() {
 
   return (
     <div>
-      <Topbar title="Data Generus" role={userRole} />
+      <Topbar title="Data Generus" role={userRole} userName={userName} />
 
       <div className="page-content">
         <div className="page-header">

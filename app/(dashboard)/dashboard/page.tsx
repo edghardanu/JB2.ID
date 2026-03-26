@@ -134,6 +134,7 @@ export default async function DashboardPage() {
       <Topbar 
         title={isUser ? "Dashboard User" : "Dashboard Admin"} 
         role={session?.role || "kelompok"} 
+        userName={session?.name}
       />
 
       <div className="page-content">

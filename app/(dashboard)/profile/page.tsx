@@ -195,7 +195,7 @@ export default function ProfilePage() {
 
   return (
     <div>
-      <Topbar title="Profil Saya" role={data.role} className="no-print">
+      <Topbar title="Profil Saya" role={data.role} className="no-print" userName={data.nama}>
         <div className="flex gap-2">
           <button className="btn btn-secondary" onClick={handlePrint}>
             Cetak Profil (PDF)

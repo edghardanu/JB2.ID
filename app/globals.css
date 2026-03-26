@@ -638,6 +638,48 @@ tr:hover td {
   color: #7c3aed;
 }
 
+.topbar-logout-btn {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  background: var(--danger) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 50px !important;
+  padding: 8px 16px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  transition: var(--transition) !important;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+.topbar-logout-btn:hover {
+  background: #b91c1c !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 15px rgba(220, 38, 38, 0.3) !important;
+}
+
+.topbar-logout-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+@media (max-width: 640px) {
+  .topbar-logout-text {
+    display: none !important;
+  }
+  .topbar-logout-btn {
+    padding: 8px !important;
+    width: 34px !important;
+    height: 34px !important;
+    border-radius: 50% !important;
+  }
+}
+
 /* ─── Search ──────────────────────────────────── */
 .search-bar {
   position: relative;
@@ -2146,114 +2188,184 @@ table {
   }
 }
 
-/* ─── Responsive Adjustments ──────────────────────────────────── */
+/* ─── Mobile Responsiveness & Layout Transitions ───────────────── */
+
+/* 1. Global Reset for Consistency */
+.layout {
+  display: flex !important;
+  min-height: 100vh !important;
+  width: 100% !important;
+  overflow: hidden !important;
+}
+
+.main-content {
+  flex: 1 !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  transition: var(--transition) !important;
+  margin-left: var(--sidebar-width) !important;
+}
+
+/* 2. Tablet View (768px - 1024px) */
 @media (max-width: 1024px) {
-  .sidebar {
-    width: 70px;
-    align-items: center;
+  :root {
+    --sidebar-width: 70px;
   }
   
-  .sidebar-logo h1, .sidebar-logo p, .sidebar-link span, .sidebar-section-label, .sidebar-user-info {
-    display: none;
+  .sidebar {
+    width: var(--sidebar-width);
+    align-items: center;
+    overflow: visible;
+  }
+  
+  .sidebar-logo h1, 
+  .sidebar-logo p, 
+  .sidebar-link span, 
+  .sidebar-section-label, 
+  .sidebar-user-info,
+  .sidebar-link text {
+    display: none !important;
   }
   
   .sidebar-link {
     justify-content: center;
     padding: 12px;
+    border-radius: 8px;
+    margin: 4px 8px;
   }
   
-  .main-content {
-    margin-left: 70px;
+  .sidebar-section {
+    padding: 0;
   }
 }
 
+/* 3. Mobile View (<= 768px) */
 @media (max-width: 768px) {
+  :root {
+    --sidebar-width: 0px;
+  }
+
   .sidebar {
     transform: translateX(-100%);
+    width: 260px !important;
+    position: fixed;
+    height: 100vh;
+    z-index: 1000;
   }
-  
+
   .sidebar.open {
     transform: translateX(0);
-    width: 240px;
-    align-items: stretch;
+    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.2);
   }
-  
+
+  /* Show text in sidebar drawer even on mobile */
   .sidebar.open .sidebar-logo h1, 
   .sidebar.open .sidebar-logo p, 
   .sidebar.open .sidebar-link span, 
   .sidebar.open .sidebar-section-label, 
   .sidebar.open .sidebar-user-info {
-    display: block;
+    display: block !important;
   }
-  
+
+  .sidebar.open .sidebar-link {
+    justify-content: flex-start;
+  }
+
   .main-content {
-    margin-left: 0;
+    margin-left: 0 !important;
+    width: 100% !important;
   }
-  
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-  
-  .topbar {
-    padding: 0 16px;
-  }
-  
+
   .page-content {
-    padding: 16px;
+    padding: 16px !important;
   }
-}
 
-/* ─── Performance & Security Polishing ───────────────────────── */
-img {
-  max-width: 100%;
-  height: auto;
-  font-style: italic;
-  vertical-align: middle;
-  background-repeat: no-repeat;
-  background-size: cover;
-  shape-margin: 0.75rem;
-}
-
-.loading-skeleton {
-  background: linear-gradient(90deg, #f0f0f0 25%, #f8f8f8 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: loading 1.5s infinite;
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(15px);
+  .mobile-menu-btn {
+    display: flex !important;
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 1001;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px;
+    box-shadow: var(--shadow);
+    color: var(--text);
+    transition: var(--transition);
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  .mobile-menu-btn.open {
+    left: 210px; /* Shift with sidebar */
   }
-}
 
-.card {
-  animation: fadeInUp 0.5s ease-out both;
-}
+  .topbar {
+    padding-left: 60px !important;
+  }
 
-/* Staggered animation for grid items */
-.stats-grid .stat-card:nth-child(1) { animation-delay: 0.1s; }
-.stats-grid .stat-card:nth-child(2) { animation-delay: 0.2s; }
-.stats-grid .stat-card:nth-child(3) { animation-delay: 0.3s; }
-.stats-grid .stat-card:nth-child(4) { animation-delay: 0.4s; }
+  .stats-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 12px !important;
+  }
 
-/* Dashboard spacing fixes for mobile */
-@media (max-width: 768px) {
+  .responsive-grid-2, .data-grid {
+    grid-template-columns: 1fr !important;
+  }
+
   .page-header {
     flex-direction: column;
-    align-items: flex-start !important;
-    gap: 16px;
+    align-items: stretch !important;
+    gap: 12px;
   }
-  
-  .topbar-actions {
-    gap: 8px;
+
+  .page-header .btn {
+    width: 100%;
   }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .topbar-title {
+    display: none;
+  }
+
+  .topbar-actions .btn span {
+    display: none; /* Icon-only actions in mobile header */
+  }
+}
+
+/* Sidebar Logo Image */
+.sidebar-logo-img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+/* 4. Scrollable Tables */
+.table-wrapper {
+  margin: 0 -1px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--radius);
+}
+
+table {
+  min-width: 700px; /* Force scroll on very small screens */
+}
+
+/* 5. Utility Layouts */
+.responsive-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+/* Ensuring cards look good in grids */
+.grid-item {
+  height: 100%;
 }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import Swal from "sweetalert2";
-import GlobalLoading from "@/app/loading";
+import GlobalLoading from "@/components/GlobalLoading";
 
 interface SidebarProps {
   user: {
@@ -363,21 +363,9 @@ export default function Sidebar({ user }: SidebarProps) {
     <>
       {loggingOut && <GlobalLoading />}
       <button
-        className="mobile-menu-btn"
+        className={`mobile-menu-btn ${isOpen ? "open" : ""}`}
         onClick={() => setIsOpen(!isOpen)}
-        style={{
-          position: "fixed",
-          top: "14px",
-          left: "14px",
-          zIndex: 1000,
-          background: "var(--bg-card)",
-          border: "1px solid var(--border)",
-          borderRadius: "8px",
-          padding: "6px",
-          display: "flex",
-          boxShadow: "var(--shadow-sm)",
-          color: "var(--text)"
-        }}
+        aria-label="Toggle Menu"
       >
         {isOpen ? (
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -396,7 +384,7 @@ export default function Sidebar({ user }: SidebarProps) {
       <aside className={`sidebar ${isOpen ? "open" : ""}`}>
         <div className="sidebar-logo" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           {siteLogo && (
-            <img src={siteLogo} alt="Logo" style={{ width: "32px", height: "32px", objectFit: "contain" }} />
+            <img src={siteLogo} alt="Logo" className="sidebar-logo-img" />
           )}
           <div>
             <h1>JB2.ID</h1>
