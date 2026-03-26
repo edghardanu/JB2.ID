@@ -1,0 +1,30 @@
+export interface GenerusItem {
+  id: string;
+  nomorUnik: string;
+  nama: string;
+  jenisKelamin: string;
+  kategoriUsia: string;
+  tempatLahir: string | null;
+  tanggalLahir: string | null;
+  alamat: string | null;
+  noTelp: string | null;
+  pendidikan: string | null;
+  pekerjaan: string | null;
+  statusNikah: string | null;
+  hobi?: string | null;
+  makananMinumanFavorit?: string | null;
+  suku?: string | null;
+  foto?: string | null;
+  desaId?: number | null;
+  kelompokId?: number | null;
+  mandiriDesaId?: number | null;
+  mandiriKelompokId?: number | null;
+  desaNama?: string | null;
+  kelompokNama?: string | null;
+  mandiriDesaNama?: string | null;
+  mandiriKelompokNama?: string | null;
+  role?: string | null;
+  email?: string | null;
+  generusId?: string | null;
+  createdAt?: string | null;
+}

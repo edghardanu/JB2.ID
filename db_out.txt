@@ -1,0 +1,21 @@
+absensi:
+CREATE TABLE absensi (
+  id TEXT PRIMARY KEY,
+  kegiatan_id TEXT NOT NULL REFERENCES kegiatan(id) ON DELETE CASCADE,
+  generus_id TEXT NOT NULL REFERENCES "generus_old"(id) ON DELETE CASCADE,
+  timestamp TEXT DEFAULT (datetime('now')),
+  keterangan TEXT CHECK(keterangan IN ('hadir', 'izin', 'alpha')) DEFAULT 'hadir'
+)
+
+users:
+CREATE TABLE users (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        role TEXT CHECK(role IN ('admin', 'desa', 'kelompok', 'generus', 'pending')) NOT NULL DEFAULT 'pending',
+        desa_id INTEGER REFERENCES desa(id) ON DELETE SET NULL,
+        kelompok_id INTEGER REFERENCES kelompok(id) ON DELETE SET NULL,
+        generus_id TEXT REFERENCES "generus_old"(id) ON DELETE CASCADE,
+        created_at TEXT DEFAULT (datetime('now'))
+      )

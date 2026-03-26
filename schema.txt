@@ -1,0 +1,62 @@
+[
+  {
+    "name": "desa",
+    "sql": "CREATE TABLE desa (\n      id INTEGER PRIMARY KEY AUTOINCREMENT,\n      nama TEXT NOT NULL,\n      created_at TEXT DEFAULT (datetime('now'))\n    )"
+  },
+  {
+    "name": "sqlite_sequence",
+    "sql": "CREATE TABLE sqlite_sequence(name,seq)"
+  },
+  {
+    "name": "kelompok",
+    "sql": "CREATE TABLE kelompok (\n      id INTEGER PRIMARY KEY AUTOINCREMENT,\n      nama TEXT NOT NULL,\n      desa_id INTEGER NOT NULL REFERENCES desa(id),\n      created_at TEXT DEFAULT (datetime('now'))\n    )"
+  },
+  {
+    "name": "users",
+    "sql": "CREATE TABLE users (\n      id TEXT PRIMARY KEY,\n      name TEXT NOT NULL,\n      email TEXT NOT NULL UNIQUE,\n      password_hash TEXT NOT NULL,\n      role TEXT NOT NULL DEFAULT 'kelompok',\n      desa_id INTEGER REFERENCES desa(id),\n      kelompok_id INTEGER REFERENCES kelompok(id),\n      created_at TEXT DEFAULT (datetime('now'))\n    , generus_id TEXT REFERENCES generus(id) ON DELETE CASCADE)"
+  },
+  {
+    "name": "sqlite_autoindex_users_1",
+    "sql": null
+  },
+  {
+    "name": "sqlite_autoindex_users_2",
+    "sql": null
+  },
+  {
+    "name": "generus",
+    "sql": "CREATE TABLE generus (\n      id TEXT PRIMARY KEY,\n      nomor_unik TEXT NOT NULL UNIQUE,\n      nama TEXT NOT NULL,\n      tempat_lahir TEXT,\n      tanggal_lahir TEXT,\n      jenis_kelamin TEXT NOT NULL,\n      kategori_usia TEXT NOT NULL,\n      alamat TEXT,\n      no_telp TEXT,\n      pendidikan TEXT,\n      pekerjaan TEXT,\n      status_nikah TEXT DEFAULT 'Belum Menikah',\n      foto TEXT,\n      desa_id INTEGER NOT NULL REFERENCES desa(id),\n      kelompok_id INTEGER NOT NULL REFERENCES kelompok(id),\n      created_by TEXT REFERENCES users(id),\n      created_at TEXT DEFAULT (datetime('now')),\n      updated_at TEXT DEFAULT (datetime('now'))\n    )"
+  },
+  {
+    "name": "sqlite_autoindex_generus_1",
+    "sql": null
+  },
+  {
+    "name": "sqlite_autoindex_generus_2",
+    "sql": null
+  },
+  {
+    "name": "kegiatan",
+    "sql": "CREATE TABLE kegiatan (\n      id TEXT PRIMARY KEY,\n      judul TEXT NOT NULL,\n      deskripsi TEXT,\n      tanggal TEXT NOT NULL,\n      lokasi TEXT,\n      desa_id INTEGER REFERENCES desa(id),\n      kelompok_id INTEGER REFERENCES kelompok(id),\n      created_by TEXT REFERENCES users(id),\n      created_at TEXT DEFAULT (datetime('now'))\n    )"
+  },
+  {
+    "name": "sqlite_autoindex_kegiatan_1",
+    "sql": null
+  },
+  {
+    "name": "absensi",
+    "sql": "CREATE TABLE absensi (\n      id TEXT PRIMARY KEY,\n      kegiatan_id TEXT NOT NULL REFERENCES kegiatan(id),\n      generus_id TEXT NOT NULL REFERENCES generus(id),\n      timestamp TEXT DEFAULT (datetime('now')),\n      keterangan TEXT DEFAULT 'hadir'\n    )"
+  },
+  {
+    "name": "sqlite_autoindex_absensi_1",
+    "sql": null
+  },
+  {
+    "name": "artikel",
+    "sql": "CREATE TABLE artikel (\n      id TEXT PRIMARY KEY,\n      judul TEXT NOT NULL,\n      konten TEXT NOT NULL,\n      ringkasan TEXT,\n      cover_image TEXT,\n      status TEXT NOT NULL DEFAULT 'pending',\n      author_id TEXT NOT NULL REFERENCES users(id),\n      published_at TEXT,\n      created_at TEXT DEFAULT (datetime('now')),\n      updated_at TEXT DEFAULT (datetime('now'))\n    )"
+  },
+  {
+    "name": "sqlite_autoindex_artikel_1",
+    "sql": null
+  }
+]

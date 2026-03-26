@@ -1,0 +1,18 @@
+import * as dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
+import { createClient } from "@libsql/client";
+
+async function test() {
+    const client = createClient({
+        url: process.env.TURSO_DATABASE_URL!,
+        authToken: process.env.TURSO_AUTH_TOKEN!,
+    });
+    try {
+        const rs = await client.execute("SELECT COUNT(*) FROM users");
+        console.log('Total users:', rs.rows[0][0]);
+    } catch (err) {
+        console.error('Raw Error:', err);
+    }
+    process.exit(0);
+}
+test();
