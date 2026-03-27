@@ -72,6 +72,8 @@ function LoginContent() {
 
       if (data.user.role === "pending") {
         window.location.href = "/pending";
+      } else if (["generus", "peserta"].includes(data.user.role)) {
+        window.location.href = "/profile";
       } else {
         window.location.href = "/dashboard";
       }

@@ -1,0 +1,18 @@
+{
+  "columns": [
+    "sql"
+  ],
+  "columnTypes": [
+    "TEXT"
+  ],
+  "rows": [
+    [
+      "CREATE TABLE users (\n      id TEXT PRIMARY KEY,\n      name TEXT NOT NULL,\n      email TEXT NOT NULL UNIQUE,\n      password_hash TEXT NOT NULL,\n      role TEXT NOT NULL DEFAULT 'kelompok',\n      desa_id INTEGER REFERENCES desa(id),\n      kelompok_id INTEGER REFERENCES kelompok(id),\n      created_at TEXT DEFAULT (datetime('now'))\n    , generus_id TEXT REFERENCES generus(id) ON DELETE CASCADE)"
+    ],
+    [
+      "CREATE TABLE users_old (\n        id TEXT PRIMARY KEY,\n        name TEXT NOT NULL,\n        email TEXT NOT NULL UNIQUE,\n        password_hash TEXT NOT NULL,\n        role TEXT NOT NULL DEFAULT 'generus',\n        desa_id INTEGER,\n        kelompok_id INTEGER,\n        generus_id TEXT,\n        created_at TEXT DEFAULT (datetime('now'))\n      )"
+    ]
+  ],
+  "rowsAffected": 0,
+  "lastInsertRowid": null
+}

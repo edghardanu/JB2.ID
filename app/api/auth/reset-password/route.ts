@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user) {
-      return NextResponse.json({ error: "Pengguna tidak ditemukan" }, { status: 404 });
+      return NextResponse.json({ error: "Email tidak terdaftar dalam sistem" }, { status: 400 });
     }
 
     const passwordHash = await bcrypt.hash(newPassword, 12);

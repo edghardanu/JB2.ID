@@ -17,7 +17,7 @@ export async function GET() {
       .leftJoin(desa, eq(kelompok.desaId, desa.id))
       .orderBy(kelompok.nama);
     return NextResponse.json(data, {
-      headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
+      headers: { "Cache-Control": "private, s-maxage=60, stale-while-revalidate=120" },
     });
   } catch (error) {
     console.error(error);

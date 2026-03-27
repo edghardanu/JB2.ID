@@ -13,9 +13,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Email dan password diperlukan" }, { status: 400 });
     }
 
-    const user = await db.query.users.findFirst({
+    let user = await db.query.users.findFirst({
       where: eq(users.email, email.toLowerCase()),
     });
+
+    // If not found in users, check users_old (Generus / Legacy)
+    let isLegacy = false;
+    if (!user) {
+        const { usersOld } = await import("@/lib/schema");
+        user = await db.query.usersOld.findFirst({
+            where: eq(usersOld.email, email.toLowerCase()),
+        }) as any;
+        if (user) isLegacy = true;
+    }
 
     if (!user) {
       return NextResponse.json({ error: "Email atau password salah" }, { status: 401 });

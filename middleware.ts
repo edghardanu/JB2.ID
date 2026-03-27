@@ -35,9 +35,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  // Generus & Creator restriction
-  if ((payload.role === "generus" || payload.role === "creator") && 
-      !pathname.startsWith("/dashboard") && 
+  // Generus & Peserta restriction
+  if ((payload.role === "generus" || payload.role === "peserta") && 
       !pathname.startsWith("/profile") && 
       !pathname.startsWith("/katalog") && 
       !pathname.startsWith("/mandiri") &&
@@ -88,14 +87,37 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  // Security Headers
+  // SECURITY HEADERS & PERFORMANCE ENHANCEMENTS
   const response = NextResponse.next();
+  
+  // Prevent clickjacking
   response.headers.set("X-Frame-Options", "DENY");
+  
+  // Prevent MIME type sniffing
   response.headers.set("X-Content-Type-Options", "nosniff");
+  
+  // Control information leaked in the Referer header
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  
+  // Enhanced XSS Protection for older browsers
   response.headers.set("X-XSS-Protection", "1; mode=block");
+  
+  // HSTS - Force HTTPS (Recommended for production)
   response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
-  response.headers.set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: *; connect-src 'self';");
+  
+  // Content Security Policy - Optimized for Next.js and external fonts
+  response.headers.set(
+    "Content-Security-Policy", 
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; " +
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; " +
+    "font-src 'self' https://fonts.gstatic.com; " +
+    "img-src 'self' data: blob: *; " +
+    "connect-src 'self' https://vitals.vercel-insights.com;"
+  );
+
+  // Performance: hint for modern browsers to pre-connect to critical domains
+  response.headers.set("Link", "<https://fonts.googleapis.com>; rel=preconnect, <https://fonts.gstatic.com>; rel=preconnect");
   
   return response;
 }

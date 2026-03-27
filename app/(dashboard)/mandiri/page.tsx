@@ -9,6 +9,7 @@ import GenerusModal from "../generus/GenerusModal";
 
 interface MandiriItem {
   id: string;
+  nomorUrut?: number;
   statusMandiri: string;
   catatan: string;
   generusId: string;
@@ -29,15 +30,19 @@ export default function MandiriPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [availableGenerus, setAvailableGenerus] = useState<GenerusItem[]>([]);
-  const [searchG, setSearchG] = useState("");
-  const [loadingG, setLoadingG] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [userRole, setUserRole] = useState("");
   const [deadline, setDeadline] = useState("");
   const [regTitle, setRegTitle] = useState("");
   const [regDesc, setRegDesc] = useState("");
   const [isPastDeadline, setIsPastDeadline] = useState(false);
+
+  // SIDEBAR & DRAG-DROP STATES
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [generusList, setGenerusList] = useState<GenerusItem[]>([]);
+  const [generusSearch, setGenerusSearch] = useState("");
+  const [generusLoading, setGenerusLoading] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const limit = 20;
 
@@ -46,18 +51,38 @@ export default function MandiriPage() {
     
     // Fetch individual settings
     const fetchSettings = async () => {
-        const [d1, d2, d3] = await Promise.all([
-            fetch("/api/mandiri/settings?key=mandiri_registration_deadline").then(r => r.json()),
-            fetch("/api/mandiri/settings?key=mandiri_registration_title").then(r => r.json()),
-            fetch("/api/mandiri/settings?key=mandiri_registration_description").then(r => r.json())
-        ]);
-        setDeadline(d1.value || "");
-        setIsPastDeadline(!!d1.isPast);
-        setRegTitle(d2.value || "");
-        setRegDesc(d3.value || "");
+        try {
+            const res = await fetch("/api/settings");
+            const s = await res.json();
+            const deadlv = s.mandiri_registration_deadline || "";
+            setDeadline(deadlv);
+            setIsPastDeadline(deadlv ? new Date() > new Date(deadlv) : false);
+            setRegTitle(s.mandiri_registration_title || "");
+            setRegDesc(s.mandiri_registration_description || "");
+        } catch (e) {
+            console.error("Failed to fetch unified settings:", e);
+        }
     };
     fetchSettings();
   }, []);
+
+  const fetchUnregisteredGenerus = useCallback(async () => {
+    setGenerusLoading(true);
+    try {
+      const params = new URLSearchParams({ search: generusSearch, notInMandiri: "true", limit: "15" });
+      const res = await fetch(`/api/generus?${params}`);
+      const json = await res.json();
+      setGenerusList(json.data || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setGenerusLoading(false);
+    }
+  }, [generusSearch]);
+
+  useEffect(() => {
+    if (sidebarOpen) fetchUnregisteredGenerus();
+  }, [sidebarOpen, fetchUnregisteredGenerus]);
 
   const handleSettings = async () => {
     const { value: formValues } = await Swal.fire({
@@ -129,28 +154,10 @@ export default function MandiriPage() {
     }
   }, [search, page]);
 
-  const fetchAvailableGenerus = useCallback(async () => {
-    setLoadingG(true);
-    try {
-      const params = new URLSearchParams({ search: searchG, limit: "15" });
-      const res = await fetch(`/api/generus?${params}`);
-      const json = await res.json();
-      setAvailableGenerus(json.data || []);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoadingG(false);
-    }
-  }, [searchG]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-
-  useEffect(() => {
-    const timer = setTimeout(fetchAvailableGenerus, 300);
-    return () => clearTimeout(timer);
-  }, [fetchAvailableGenerus]);
 
   const handleAdd = async (generusId: string) => {
     if (isPastDeadline) {
@@ -168,6 +175,7 @@ export default function MandiriPage() {
       
       Swal.fire({ icon: "success", title: "Berhasil", text: "Berhasil menambahkan ke daftar mandiri", timer: 1500, showConfirmButton: false });
       fetchData();
+      if (sidebarOpen) fetchUnregisteredGenerus();
     } catch (e: any) {
       Swal.fire({ icon: "error", title: "Gagal", text: e.message });
     }
@@ -232,29 +240,36 @@ export default function MandiriPage() {
     }
   };
 
-  const onDragStart = (e: React.DragEvent, id: string) => {
-    console.log("Drag Start:", id);
-    e.dataTransfer.setData("text/plain", id);
-    e.dataTransfer.dropEffect = "copy";
-  };
-
-  const onDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    const id = e.dataTransfer.getData("text/plain");
-    console.log("On Drop:", id);
-    if (id) handleAdd(id);
-  };
-
-  const allowDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
 
   return (
-    <div>
-      <Topbar title={regTitle || "Usia Mandiri / Persiapan Nikah"} role={userRole} />
-      
-      <div className="page-content">
-        {isPastDeadline && (
+    <div style={{ display: "flex", height: "calc(100vh - 64px)", overflow: "hidden" }}>
+      <div style={{ flex: 1, overflowY: "auto", position: "relative" }}>
+        <Topbar title={regTitle || "Usia Mandiri / Persiapan Nikah"} role={userRole} />
+        
+        <div className="page-content" 
+             onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+             onDragLeave={() => setIsDragOver(false)}
+             onDrop={(e) => {
+               e.preventDefault();
+               setIsDragOver(false);
+               const gid = e.dataTransfer.getData("generusId");
+               if (gid) handleAdd(gid);
+             }}>
+          
+          {isDragOver && (
+            <div style={{
+              position: "fixed", top: 64, left: 0, right: sidebarOpen ? 300 : 0, bottom: 0,
+              background: "rgba(34, 197, 94, 0.1)", border: "4px dashed #22c55e",
+              zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center",
+              pointerEvents: "none", transition: "all 0.2s"
+            }}>
+              <div style={{ background: "#fff", padding: "20px 40px", borderRadius: "20px", boxShadow: "0 10px 25px rgba(0,0,0,0.1)", color: "#166534", fontWeight: "700", display: "flex", alignItems: "center", gap: "12px" }}>
+                <span style={{ fontSize: "24px" }}>➕</span> Lepaskan untuk Tambah Peserta
+              </div>
+            </div>
+          )}
+
+          {isPastDeadline && (
           <div style={{
             background: "#fff7ed", border: "1px solid #ffedd5", borderRadius: "12px", 
             padding: "16px", marginBottom: "20px", display: "flex", alignItems: "center", gap: "12px",
@@ -302,6 +317,15 @@ export default function MandiriPage() {
               Bagikan Link
             </button>
             <button 
+              className={`btn ${sidebarOpen ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 16 }}>
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" />
+              </svg>
+              Integrasi Data
+            </button>
+            <button 
               className="btn btn-primary" 
               onClick={() => {
                 if (isPastDeadline) {
@@ -321,79 +345,27 @@ export default function MandiriPage() {
           </div>
         </div>
 
-        <div className="responsive-grid-2" style={{ gridTemplateColumns: "1fr 3fr", gap: "20px" }}>
-          {/* Sisi Kiri: Daftar Generus Tersedia (Drag) */}
-          <div className="card" style={{ maxHeight: "calc(100vh - 200px)", display: "flex", flexDirection: "column" }}>
-            <div className="card-header">
-              <span className="card-title">Data Generus</span>
-            </div>
-            <div className="card-body" style={{ flex: 1, overflowY: "auto", padding: "12px" }}>
-              <div className="search-bar" style={{ marginBottom: "12px" }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
-                <input type="text" className="form-control" placeholder="Cari..." value={searchG} onChange={(e) => setSearchG(e.target.value)} />
-              </div>
-              
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {loadingG ? (
-                  <div className="text-center font-muted">Memuat...</div>
-                ) : availableGenerus.length === 0 ? (
-                  <div className="text-center font-muted">Tidak ditemukan</div>
-                ) : availableGenerus.map(g => (
-                  <div 
-                    key={g.id} 
-                    draggable 
-                    onDragStart={(e) => onDragStart(e, g.id)}
-                    style={{
-                      padding: "8px 12px",
-                      background: "var(--bg)",
-                      border: "1px solid var(--border)",
-                      borderRadius: "8px",
-                      cursor: "grab",
-                      fontSize: "13px",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "10px"
-                    }}
-                  >
-                    <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#e2e8f0", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10 }}>
-                        {g.foto ? <img src={g.foto} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : g.nama.charAt(0)}
-                    </div>
-                    <div style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {g.nama}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <p className="text-muted text-xs" style={{ marginTop: "12px", textAlign: "center" }}>Tarik nama ke tabel di kanan ➔</p>
+        <div className="card">
+          <div className="card-header" style={{ justifyContent: "space-between" }}>
+            <span className="card-title">Daftar Peserta Mandiri ({total})</span>
+            <div className="search-bar" style={{ maxWidth: "250px" }}>
+              <input type="text" className="form-control" placeholder="Cari di list ini..." value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
           </div>
 
-          {/* Sisi Kanan: Daftar Peserta Mandiri */}
-          <div 
-            className="card" 
-            onDrop={onDrop} 
-            onDragOver={allowDrop}
-            style={{ minHeight: "300px" }}
-          >
-            <div className="card-header" style={{ justifyContent: "space-between" }}>
-              <span className="card-title">Daftar Peserta Mandiri ({total})</span>
-              <div className="search-bar" style={{ maxWidth: "250px" }}>
-                <input type="text" className="form-control" placeholder="Cari di list ini..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          <div className="table-wrapper">
+            {loading && data.length === 0 ? (
+              <div className="loading"><div className="spinner" /></div>
+            ) : data.length === 0 ? (
+              <div className="empty-state" style={{ padding: "40px" }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 48, opacity: 0.3 }}><path d="M12 2v20M2 12h20" /></svg>
+                <p>Belum ada peserta mandiri yang terdaftar.</p>
               </div>
-            </div>
-
-            <div className="table-wrapper">
-              {loading && data.length === 0 ? (
-                <div className="loading"><div className="spinner" /></div>
-              ) : data.length === 0 ? (
-                <div className="empty-state" style={{ padding: "40px" }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 48, opacity: 0.3 }}><path d="M12 2v20M2 12h20" /></svg>
-                  <p>Belum ada peserta. Tarik generus ke sini untuk menambahkan.</p>
-                </div>
-              ) : (
+            ) : (
                 <table>
                   <thead>
                     <tr>
+                      <th style={{ width: "50px" }}>No.</th>
                       <th>Foto</th>
                       <th>No. Unik</th>
                       <th>Nama</th>
@@ -408,6 +380,9 @@ export default function MandiriPage() {
                   <tbody>
                     {data.map((item) => (
                       <tr key={item.id}>
+                        <td>
+                           <span style={{ fontWeight: "700", color: "var(--primary)" }}>#{item.nomorUrut}</span>
+                        </td>
                         <td>
                           <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#f1f5f9", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}>
                             {item.foto ? <img src={item.foto} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : item.nama.charAt(0)}
@@ -440,9 +415,96 @@ export default function MandiriPage() {
                 </table>
               )}
             </div>
-          </div>
+        </div>
         </div>
       </div>
+
+      {/* RECRUITMENT SIDEBAR */}
+      <div style={{ 
+        width: sidebarOpen ? "320px" : "0px", 
+        background: "#fff", 
+        borderLeft: "1px solid #e2e8f0",
+        transition: "all 0.3s ease",
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        position: "relative"
+      }}>
+          <div style={{ padding: "24px", borderBottom: "1px solid #f1f5f9" }}>
+             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "700" }}>Pencarian Data</h3>
+                <button className="btn-icon" onClick={() => setSidebarOpen(false)}>×</button>
+             </div>
+             <div className="search-bar">
+                <input 
+                  type="text" 
+                  className="form-control" 
+                  placeholder="Cari nama generus..." 
+                  value={generusSearch}
+                  onChange={(e) => setGenerusSearch(e.target.value)}
+                />
+             </div>
+             <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "12px" }}>
+                💡 Drag foto atau nama peserta ke area tabel untuk menambahkan.
+             </p>
+          </div>
+
+          <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
+             {generusLoading ? (
+                <div style={{ padding: "20px", textAlign: "center", color: "var(--text-muted)" }}>Mencari...</div>
+             ) : generusList.length === 0 ? (
+                <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                   Peserta tidak ditemukan atau sudah terdaftar di Mandiri.
+                </div>
+             ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                   {generusList.map(item => (
+                      <div 
+                        key={item.id}
+                        draggable="true"
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData("generusId", item.id);
+                          e.dataTransfer.effectAllowed = "move";
+                        }}
+                        style={{
+                          padding: "12px", border: "1px solid #f1f5f9", borderRadius: "12px",
+                          display: "flex", alignItems: "center", gap: "12px", cursor: "grab",
+                          background: "#fff", transition: "all 0.2s"
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.borderColor = "var(--primary)"}
+                        onMouseLeave={(e) => e.currentTarget.style.borderColor = "#f1f5f9"}
+                      >
+                         <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#f8fafc", overflow: "hidden", border: "1px solid #e2e8f0" }}>
+                            {item.foto ? <img src={item.foto} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ textAlign: 'center', lineHeight: '40px' }}>{item.nama[0]}</div>}
+                         </div>
+                         <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: "600", fontSize: "13.5px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.nama}</div>
+                            <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>{item.nomorUnik} • {item.jenisKelamin}</div>
+                         </div>
+                         <button 
+                            className="btn-icon" 
+                            style={{ color: "var(--primary)" }}
+                            onClick={() => handleAdd(item.id)}
+                            title="Tambah manual"
+                         >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ width: 14 }}><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                         </button>
+                      </div>
+                   ))}
+                </div>
+             )}
+          </div>
+      </div>
+
+      <style jsx>{`
+        .btn-icon {
+          background: none; border: none; cursor: pointer; padding: 4px; border-radius: 4px;
+          display: flex; alignItems: center; justifyContent: center;
+        }
+        .btn-icon:hover { background: #f1f5f9; }
+        .badge-blue { background: #eff6ff; color: #1d4ed8; }
+        .badge-gray { background: #f1f5f9; color: #475569; }
+      `}</style>
 
       {showModal && (
         <GenerusModal

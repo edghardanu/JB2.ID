@@ -1,0 +1,15 @@
+{
+  "columns": [
+    "name",
+    "tbl_name",
+    "sql"
+  ],
+  "columnTypes": [
+    "TEXT",
+    "TEXT",
+    "TEXT"
+  ],
+  "rows": [],
+  "rowsAffected": 0,
+  "lastInsertRowid": null
+}

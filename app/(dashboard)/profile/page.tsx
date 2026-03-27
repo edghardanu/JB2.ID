@@ -12,6 +12,7 @@ interface ProfileData {
   id: string;
   nomorUnik: string;
   nama: string;
+  nomorUrut?: number | null;
   tempatLahir: string | null;
   tanggalLahir: string | null;
   jenisKelamin: string;
@@ -29,6 +30,9 @@ interface ProfileData {
   desaNama: string | null;
   kelompokNama: string | null;
   role?: string;
+  instagram?: string | null;
+  kota?: string | null;
+  mandiriDesaNama?: string | null;
 }
 
 export default function ProfilePage() {
@@ -651,7 +655,9 @@ export default function ProfilePage() {
                     data.role === "kmm_daerah" || data.role === "admin" || data.role === "tim_pnkb" ? "PANITIA" : 
                     "PESERTA"}</span>
             </div>
-            <div className="id-org-name">Jakarta Barat 2 &bull; Cengkareng</div>
+            <div className="id-org-name" style={{ textTransform: "uppercase" }}>
+              {data.kota || "Jakarta Barat 2"} &bull; {data.mandiriDesaNama || data.desaNama || "Cengkareng"}
+            </div>
           </div>
 
           <div className="id-card-main-content">
@@ -668,10 +674,17 @@ export default function ProfilePage() {
 
             <div className="id-info-section">
               <h1 className="id-full-name">{data.nama}</h1>
-              <div className="id-member-code">ID: {data.nomorUnik}</div>
-              <div className="id-qr-box">
-                <canvas ref={idCardCanvasRef} style={{ width: '130px', height: '130px' }} />
-                <div className="id-qr-label">Verified Identifier</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "5px", alignItems: "center", justifyContent: "center", marginTop: "5px" }}>
+                <div className="id-member-code" style={{ fontSize: "16px", fontWeight: "900" }}>ID: {data.nomorUnik}</div>
+                {data.nomorUrut && (
+                  <div className="id-member-code" style={{ opacity: 1, color: "var(--primary)", background: "rgba(0,0,0,0.03)", padding: "4px 15px", borderRadius: "8px", border: "1.5px solid rgba(0,0,0,0.1)", fontSize: "18px", fontWeight: "950" }}>
+                    NO. URUT: {data.nomorUrut}
+                  </div>
+                )}
+              </div>
+              <div className="id-qr-box" style={{ padding: "15px", borderRadius: "20px", marginTop: "10px" }}>
+                <canvas ref={idCardCanvasRef} style={{ width: '150px', height: '150px' }} />
+                <div className="id-qr-label" style={{ fontSize: "11px", marginTop: "5px" }}>Verified QR Identifier</div>
               </div>
             </div>
 

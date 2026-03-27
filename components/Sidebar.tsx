@@ -29,9 +29,10 @@ const navItems = [
     roles: ["admin", "pengurus_daerah", "kmm_daerah", "admin_keuangan"],
     items: [
       { href: "/mandiri", label: "Peserta Mandiri", icon: "sparkles" },
+      { href: "/mandiri/data", label: "Data Usia Mandiri", icon: "users" },
       { href: "/mandiri/kegiatan", label: "Kegiatan Mandiri", icon: "calendar" },
       { href: "/mandiri/absensi", label: "Absensi Mandiri", icon: "check-square" },
-      { href: "/admin/katalog", label: "Katalog Mandiri", icon: "heart" },
+      { href: "/katalog", label: "Katalog Mandiri", icon: "heart" },
       { href: "/mandiri/antrean", label: "Antrean", icon: "grid" },
       { href: "/mandiri/romantic-room", label: "Romantic Room", icon: "heart" },
       { href: "/mandiri/desa", label: "Kelola Desa", icon: "map" },
@@ -59,7 +60,7 @@ const navItems = [
       { href: "/admin/desa", label: "Kelola Desa", icon: "map", roles: ["admin", "pengurus_daerah", "kmm_daerah"] },
       { href: "/admin/berita", label: "Moderasi Berita", icon: "file-text", roles: ["admin", "pengurus_daerah", "kmm_daerah"] },
       { href: "/admin/artikel", label: "Moderasi Artikel", icon: "book-open", roles: ["admin", "pengurus_daerah", "kmm_daerah"] },
-      { href: "/admin/katalog", label: "Katalog Mandiri", icon: "heart", roles: ["admin_romantic_room"] },
+      { href: "/katalog", label: "Katalog Mandiri", icon: "heart", roles: ["admin_romantic_room"] },
       { href: "/mandiri/romantic-room", label: "Romantic Room", icon: "heart", roles: ["admin_romantic_room"] },
     ],
   },
@@ -74,6 +75,14 @@ const navItems = [
 
 const userNavs: Record<string, any[]> = {
   generus: [
+    {
+      section: "Menu Pribadi",
+      items: [
+        { href: "/profile", label: "Profil Saya (QR)", icon: "user" },
+      ],
+    },
+  ],
+  peserta: [
     {
       section: "Usia Mandiri/Nikah",
       items: [
@@ -115,7 +124,8 @@ const userNavs: Record<string, any[]> = {
     {
       section: "Usia Mandiri/Nikah",
       items: [
-        { href: "/admin/katalog", label: "Katalog Mandiri", icon: "heart" },
+        { href: "/mandiri/data", label: "Data Usia Mandiri", icon: "users" },
+        { href: "/katalog", label: "Katalog Mandiri", icon: "heart" },
         { href: "/mandiri/antrean", label: "Antrean", icon: "grid" },
         { href: "/mandiri/romantic-room", label: "Romantic Room", icon: "heart" },
       ],
@@ -138,7 +148,8 @@ const userNavs: Record<string, any[]> = {
     {
       section: "Usia Mandiri/Nikah",
       items: [
-        { href: "/admin/katalog", label: "Katalog Mandiri", icon: "heart" },
+        { href: "/mandiri/data", label: "Data Usia Mandiri", icon: "users" },
+        { href: "/katalog", label: "Katalog Mandiri", icon: "heart" },
         { href: "/mandiri/antrean", label: "Antrean", icon: "grid" },
         { href: "/mandiri/romantic-room", label: "Romantic Room", icon: "heart" },
       ],
@@ -166,6 +177,7 @@ const userNavs: Record<string, any[]> = {
     {
       section: "Usia Mandiri/Nikah",
       items: [
+        { href: "/mandiri/data", label: "Data Usia Mandiri", icon: "users" },
         { href: "/mandiri/kegiatan", label: "Kegiatan Mandiri", icon: "calendar" },
         { href: "/rab?type=mandiri", label: "RAB Kegiatan Mandiri", icon: "dollar-sign" },
       ],
@@ -400,7 +412,16 @@ export default function Sidebar({ user }: SidebarProps) {
             // Filter items based on access
             const visibleItems = section.items.filter((item: any) => {
               const isPanitia = ["admin", "pengurus_daerah", "kmm_daerah", "tim_pnkb", "admin_romantic_room", "admin_keuangan", "admin_kegiatan"].includes(user.role);
-              if (item.label === "Katalog Mandiri" && !user.isInMandiri && !isPanitia) return false;
+              
+              // Hide Mandiri items if not in Mandiri and not a committee member
+              const isMandiriItem = item.href.startsWith("/mandiri") || 
+                                   item.label.includes("Mandiri") || 
+                                   item.label === "Antrean" || 
+                                   item.label === "Romantic Room" ||
+                                   item.href === "/katalog";
+                                   
+              if (isMandiriItem && !user.isInMandiri && !isPanitia) return false;
+              
               if (item.roles && !item.roles.includes(user.role)) return false;
               return true;
             });

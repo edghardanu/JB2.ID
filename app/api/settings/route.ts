@@ -13,7 +13,9 @@ export async function GET() {
     data.forEach((s) => {
       settingsObj[s.key] = s.value;
     });
-    return NextResponse.json(settingsObj);
+    return NextResponse.json(settingsObj, {
+      headers: { "Cache-Control": "private, s-maxage=60, stale-while-revalidate=120" },
+    });
   } catch (error) {
     console.error("Settings GET error:", error);
     return NextResponse.json({ error: "Gagal mengambil pengaturan" }, { status: 500 });

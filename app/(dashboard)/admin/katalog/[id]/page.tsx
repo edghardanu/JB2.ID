@@ -23,7 +23,7 @@ export default function AdminKatalogDetailPage({ params }: { params: { id: strin
   useEffect(() => {
     if (data && idCardCanvasRef.current) {
       QRCode.toCanvas(idCardCanvasRef.current, data.nomorUnik, {
-        width: 150,
+        width: 100,
         margin: 1,
         color: { dark: "#000000", light: "#ffffff" },
       });
@@ -131,6 +131,24 @@ export default function AdminKatalogDetailPage({ params }: { params: { id: strin
                   <div>
                     <label>TTL</label>
                     <p>{data.tempatLahir || "-"}, {data.tanggalLahir || "-"}</p>
+                  </div>
+                </div>
+                <div className="info-card-item">
+                  <User className="icon-detail" />
+                  <div>
+                    <label>Umur</label>
+                    <p>
+                      {(() => {
+                        if (!data.tanggalLahir) return "-";
+                        const birthDate = new Date(data.tanggalLahir);
+                        if (isNaN(birthDate.getTime())) return "-";
+                        const today = new Date();
+                        let age = today.getFullYear() - birthDate.getFullYear();
+                        const m = today.getMonth() - birthDate.getMonth();
+                        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) { age--; }
+                        return age + " Tahun";
+                      })()}
+                    </p>
                   </div>
                 </div>
                 <div className="info-card-item">
@@ -268,7 +286,9 @@ export default function AdminKatalogDetailPage({ params }: { params: { id: strin
                     ["admin", "kmm_daerah", "tim_pnkb", "admin_romantic_room"].includes(data.role || "") ? "PANITIA" : 
                     "PESERTA"}</span>
             </div>
-            <div className="id-org-name">Jakarta Barat 2 &bull; Cengkareng</div>
+            <div className="id-org-name" style={{ textTransform: "uppercase" }}>
+              {data.kota || "Jakarta Barat 2"} &bull; {data.mandiriDesaNama || data.desaNama || "Cengkareng"}
+            </div>
           </div>
 
           <div className="id-card-main-content">
@@ -285,10 +305,17 @@ export default function AdminKatalogDetailPage({ params }: { params: { id: strin
 
             <div className="id-info-section">
               <h1 className="id-full-name">{data.nama}</h1>
-              <div className="id-member-code">ID: {data.nomorUnik}</div>
-              <div className="id-qr-box">
-                <canvas ref={idCardCanvasRef} style={{ width: '130px', height: '130px' }} />
-                <div className="id-qr-label">Verified Identifier</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "5px", alignItems: "center", justifyContent: "center", marginTop: "5px" }}>
+                <div className="id-member-code" style={{ fontSize: "16px", fontWeight: "900" }}>ID: {data.nomorUnik}</div>
+                {data.nomorUrut && (
+                  <div className="id-member-code" style={{ opacity: 1, color: "var(--primary)", background: "rgba(0,0,0,0.03)", padding: "4px 15px", borderRadius: "8px", border: "1.5px solid rgba(0,0,0,0.1)", fontSize: "18px", fontWeight: "950" }}>
+                    NO. URUT: {data.nomorUrut}
+                  </div>
+                )}
+              </div>
+              <div className="id-qr-box" style={{ padding: "10px", borderRadius: "14px", marginTop: "12px", background: "white", width: "120px", margin: "12px auto" }}>
+                <canvas ref={idCardCanvasRef} style={{ width: '100px', height: '100px' }} />
+                <div className="id-qr-label" style={{ fontSize: "9px", marginTop: "6px", fontWeight: "900", color: "#1e3a8a", textTransform: "uppercase" }}>Verified Digital ID</div>
               </div>
             </div>
 

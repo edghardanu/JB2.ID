@@ -27,4 +27,7 @@ export interface GenerusItem {
   email?: string | null;
   generusId?: string | null;
   createdAt?: string | null;
+  instagram?: string | null;
+  nomorUrut?: number | null;
+  kota?: string | null;
 }

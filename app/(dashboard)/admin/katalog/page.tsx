@@ -20,6 +20,8 @@ export default function AdminKatalogPage() {
   const [latestActivity, setLatestActivity] = useState<any>(null);
   const [selections, setSelections] = useState<any[]>([]);
   const limit = 20;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   const fetchData = useCallback(async () => {
     if (!isAuthorized) return;
@@ -126,6 +128,8 @@ export default function AdminKatalogPage() {
   };
 
   const totalPages = Math.ceil(total / limit);
+
+  if (!mounted) return null;
 
   if (loading && !authorizedChecked) {
     return (
@@ -288,15 +292,54 @@ export default function AdminKatalogPage() {
                         <div className="initials-compact">{item.nama.charAt(0)}</div>
                       )}
                       <div className="category-pill-abs" style={item.role && item.role !== "generus" ? { background: "#1e293b", color: "#f8fafc" } : {}}>
-                        {item.role && item.role !== "generus" ? "PANITIA" : item.kategoriUsia}
+                        {["admin", "tim_pnkb", "admin_romantic_room", "kmm_daerah", "pengurus_daerah"].includes(item.role || "") ? "Panitia" : item.kategoriUsia}
                       </div>
                     </div>
                     <div className="profile-info-compact">
                       <h3 className="name-compact">{item.nama}</h3>
-                      <div className="id-compact">ID: {item.nomorUnik}</div>
+                      <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                        <div className="id-compact">ID: {item.nomorUnik}</div>
+                        {item.nomorUrut && (
+                          <div className="id-compact" style={{ color: "var(--primary)", background: "var(--primary-light)", padding: "0 4px", borderRadius: "4px" }}>
+                            #{item.nomorUrut}
+                          </div>
+                        )}
+                      </div>
                       <div className="loc-compact">
                         <MapPin size={10} />
-                        <span>{item.desaNama} &bull; {item.kelompokNama}</span>
+                        <span>{item.mandiriDesaNama || item.desaNama} &bull; {item.mandiriKelompokNama || item.kelompokNama}</span>
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "12px" }}>
+                        {["admin", "admin_romantic_room", "tim_pnkb", "pengurus_daerah"].includes(myProfile?.role || "") && (
+                           <div style={{ background: "#eff6ff", color: "#1e40af", padding: "4px 10px", borderRadius: "10px", fontSize: "11px", fontWeight: "900", display: "flex", alignItems: "center", gap: "4px", border: "1.5px solid #dbeafe" }}>
+                              <User size={12} strokeWidth={3} />
+                              <span style={{ opacity: 0.7, marginRight: "1px" }}>Umur:</span>
+                              {(() => {
+                                if (!item.tanggalLahir) return "-";
+                                const birthDate = new Date(item.tanggalLahir);
+                                if (isNaN(birthDate.getTime())) return "-";
+                                const today = new Date();
+                                let age = today.getFullYear() - birthDate.getFullYear();
+                                const m = today.getMonth() - birthDate.getMonth();
+                                if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) { age--; }
+                                return age + " Thn";
+                              })()}
+                           </div>
+                        )}
+                        {["admin", "admin_romantic_room", "tim_pnkb", "pengurus_daerah"].includes(myProfile?.role || "") && item.instagram && (
+                           <div style={{ background: "#fdf2f8", color: "#be185d", padding: "4px 10px", borderRadius: "10px", fontSize: "11px", fontWeight: "900", display: "flex", alignItems: "center", gap: "4px", border: "1.5px solid #fce7f3" }}>
+                              <Globe size={12} strokeWidth={3} />
+                              <span style={{ opacity: 0.7, marginRight: "1px" }}>IG:</span>
+                              <a 
+                                href={`https://instagram.com/${item.instagram}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                style={{ color: "inherit", textDecoration: "none" }}
+                              >
+                                @{item.instagram}
+                              </a>
+                           </div>
+                        )}
                       </div>
                     </div>
                     {/* QR Code for Printing */}
@@ -318,13 +361,28 @@ export default function AdminKatalogPage() {
                         <p className="bit-value">{item.tempatLahir || "-"}, {item.tanggalLahir || "-"}</p>
                       </div>
                     </div>
-                    <div className="info-bit">
-                      <Globe size={11} className="bit-icon" />
-                      <div>
-                        <span className="bit-label">Suku</span>
-                        <p className="bit-value">{item.suku || "-"}</p>
+                    {["admin", "generus", "admin_romantic_room", "tim_pnkb", "pengurus_daerah"].includes(myProfile?.role || "") && (
+                      <div className="info-bit">
+                        <User size={11} className="bit-icon" />
+                        <div>
+                          <span className="bit-label">Umur</span>
+                          <p className="bit-value">
+                            {(() => {
+                              if (!item.tanggalLahir) return "-";
+                              const birthDate = new Date(item.tanggalLahir);
+                              if (isNaN(birthDate.getTime())) return "-";
+                              const today = new Date();
+                              let age = today.getFullYear() - birthDate.getFullYear();
+                              const m = today.getMonth() - birthDate.getMonth();
+                              if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                                age--;
+                              }
+                              return age + " Tahun";
+                            })()}
+                          </p>
+                        </div>
                       </div>
-                    </div>
+                    )}
                     <div className="info-bit">
                       <Heart size={11} className="bit-icon text-pink-500" />
                       <div>
@@ -332,7 +390,32 @@ export default function AdminKatalogPage() {
                         <p className="bit-value">{item.statusNikah || "Belum Menikah"}</p>
                       </div>
                     </div>
-                    {["admin", "kmm_daerah", "tim_pnkb", "admin_romantic_room", "pengurus_daerah"].includes(myProfile?.role || "") && (
+                    <div className="info-bit">
+                      <Globe size={11} className="bit-icon" />
+                      <div>
+                        <span className="bit-label">Suku</span>
+                        <p className="bit-value">{item.suku || "-"}</p>
+                      </div>
+                    </div>
+                    {["admin", "generus", "admin_romantic_room", "tim_pnkb", "pengurus_daerah"].includes(myProfile?.role || "") && item.instagram && (
+                      <div className="info-bit">
+                        <Globe size={11} className="bit-icon" stroke="#e1306c" />
+                        <div>
+                          <span className="bit-label">Instagram</span>
+                          <p className="bit-value">
+                            <a 
+                              href={`https://instagram.com/${item.instagram}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              style={{ color: "inherit", textDecoration: "none" }}
+                            >
+                              @{item.instagram}
+                            </a>
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    {["admin", "kmm_daerah", "admin_romantic_room", "tim_pnkb", "pengurus_daerah"].includes(myProfile?.role || "") && (
                       <div className="info-bit">
                         <Phone size={11} className="bit-icon" />
                         <div>
@@ -373,7 +456,7 @@ export default function AdminKatalogPage() {
                     </div>
                   </div>
 
-                  {["admin", "kmm_daerah", "tim_pnkb", "admin_romantic_room", "pengurus_daerah"].includes(myProfile?.role || "") && (
+                  {["admin", "generus", "tim_pnkb", "admin_romantic_room", "pengurus_daerah"].includes(myProfile?.role || "") && (
                     <div className="address-box-compact">
                       <span className="bit-label">Alamat:</span>
                       <p className="addr-text-compact">{item.alamat || "Alamat belum diisi."}</p>

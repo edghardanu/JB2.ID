@@ -93,7 +93,10 @@ async function getStats(session: any) {
         .from(generus)
         .leftJoin(users, eq(generus.id, users.generusId))
         .where(and(finalGenerusFilter, eq(generus.kategoriUsia, "Bekerja"))),
-      db.select({ count: sql<number>`count(*)` }).from(mandiri),
+      db.select({ count: sql<number>`count(DISTINCT ${mandiri.id})` })
+        .from(mandiri)
+        .innerJoin(generus, eq(mandiri.generusId, generus.id))
+        .where(generusFilter),
     ]);
 
     return {
@@ -162,7 +165,10 @@ function AdminDashboard({ role, stats }: { role: string; stats: any }) {
       <h3 className="section-title" style={{ marginTop: "1rem", marginBottom: "1rem" }}>Data Generus & Pendidikan</h3>
       <div className="stats-grid" style={{ marginBottom: "2rem" }}>
         {(role === "admin" || role === "pengurus_daerah" || role === "kmm_daerah" || role === "desa" || role === "kelompok" || role === "tim_pnkb" || role === "admin_romantic_room") && (
-          <StatCard icon="users" color="blue" label="Total Generus" value={stats?.generus ?? 0} href="/generus" />
+          <>
+            <StatCard icon="users" color="blue" label="Total Generus" value={stats?.generus ?? 0} href="/generus" />
+            <StatCard icon="sparkles" color="emerald" label="Total Peserta" value={stats?.mandiri ?? 0} href="/mandiri" />
+          </>
         )}
         {(role === "admin" || role === "pengurus_daerah" || role === "kmm_daerah" || role === "desa" || role === "kelompok" || role === "tim_pnkb") && (
           <>
@@ -184,7 +190,7 @@ function AdminDashboard({ role, stats }: { role: string; stats: any }) {
             <StatCard icon="graduation-cap" color="purple" label="Kuliah" value={stats?.kuliah ?? 0} href="/generus" />
             <StatCard icon="briefcase" color="gray" label="Bekerja" value={stats?.bekerja ?? 0} href="/generus" />
             {role !== "admin_romantic_room" && (
-              <StatCard icon="heart" color="rose" label="Katalog PDKT" value={stats?.mandiri ?? 0} href="/admin/katalog" />
+              <StatCard icon="heart" color="rose" label="Katalog PDKT" value={stats?.mandiri ?? 0} href="/katalog" />
             )}
             <StatCard icon="heart" color="pink" label="Romantic Room" value="Admin" href="/mandiri/romantic-room" />
           </>
@@ -300,6 +306,7 @@ function StatCard({ icon, color, label, href, value }: {
     library: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m16 6 4 14M12 6v14M8 8v12M4 4v16" /></svg>,
     "graduation-cap": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z" /><path d="M6 12v5c3 3 9 3 12 0v-5" /></svg>,
     briefcase: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg>,
+    sparkles: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" /><path d="m5 3 1 1" /><path d="m19 17 1 1" /><path d="M19 3l1 1" /><path d="m5 17 1 1" /></svg>,
   };
 
   return (

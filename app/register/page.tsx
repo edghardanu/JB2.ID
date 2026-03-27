@@ -23,11 +23,8 @@ export default function RegisterPage() {
     email: "",
     password: "",
     confirmPassword: "",
-    desaId: "",
-    kelompokId: "",
+    nomorUnik: "",
   });
-  const [desaList, setDesaList] = useState<Desa[]>([]);
-  const [kelompokList, setKelompokList] = useState<Kelompok[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -45,37 +42,6 @@ export default function RegisterPage() {
     }
   }, []);
 
-  useEffect(() => {
-    fetch("/api/auth/desa")
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setDesaList(data);
-        } else {
-          setError(data.error || "Gagal memuat daftar desa");
-        }
-      })
-      .catch((err) => {
-        console.error(err);
-        setError("Koneksi ke server gagal");
-      });
-  }, []);
-
-  useEffect(() => {
-    if (!form.desaId) {
-      setKelompokList([]);
-      setForm((f) => ({ ...f, kelompokId: "" }));
-      return;
-    }
-    fetch(`/api/auth/kelompok?desaId=${form.desaId}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setKelompokList(data);
-        }
-      })
-      .catch(console.error);
-  }, [form.desaId]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -94,10 +60,6 @@ export default function RegisterPage() {
       setError("Password minimal 8 karakter");
       return;
     }
-    if (!form.desaId || !form.kelompokId) {
-      setError("Pilih desa dan kelompok terlebih dahulu");
-      return;
-    }
 
     setLoading(true);
     try {
@@ -108,8 +70,7 @@ export default function RegisterPage() {
           name: form.name,
           email: form.email,
           password: form.password,
-          desaId: form.desaId,
-          kelompokId: form.kelompokId,
+          nomorUnik: form.nomorUnik,
         }),
       });
 
@@ -159,7 +120,7 @@ export default function RegisterPage() {
         </div>
 
         <h2 className="auth-title">Buat Akun Baru</h2>
-        <p className="auth-subtitle">Lengkapi data untuk mendaftar</p>
+        <p className="auth-subtitle">Registrasi hanya untuk yang sudah mendaftar Mandiri</p>
 
         {error && (
           <div className="alert alert-error">
@@ -173,6 +134,25 @@ export default function RegisterPage() {
         )}
 
         <form onSubmit={handleSubmit}>
+          <div className="form-group" style={{ background: "#f0f9ff", padding: "12px", borderRadius: "10px", border: "1px solid #bae6fd", marginBottom: "20px" }}>
+            <label className="form-label" htmlFor="nomorUnik" style={{ color: "#0369a1", fontWeight: "700" }}>
+              Nomor Unik Mandiri <span className="required">*</span>
+            </label>
+            <input
+              id="nomorUnik"
+              name="nomorUnik"
+              type="text"
+              className="form-control"
+              placeholder="Contoh: MND123456"
+              value={form.nomorUnik}
+              onChange={handleChange}
+              required
+              style={{ border: "1px solid #7dd3fc" }}
+            />
+            <p style={{ fontSize: "11px", color: "#0ea5e9", marginTop: "5px" }}>
+              Dapatkan nomor unik Anda di link registrasi mandiri.
+            </p>
+          </div>
           <div className="form-group">
             <label className="form-label" htmlFor="name">
               Nama Lengkap <span className="required">*</span>
@@ -205,50 +185,6 @@ export default function RegisterPage() {
             />
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label" htmlFor="desa">
-                Desa <span className="required">*</span>
-              </label>
-              <select
-                id="desa"
-                name="desaId"
-                className="form-control"
-                value={form.desaId}
-                onChange={handleChange}
-                required
-              >
-                <option value="">Pilih Desa</option>
-                {desaList.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.nama}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label" htmlFor="kelompok">
-                Kelompok <span className="required">*</span>
-              </label>
-              <select
-                id="kelompok"
-                name="kelompokId"
-                className="form-control"
-                value={form.kelompokId}
-                onChange={handleChange}
-                required
-                disabled={!form.desaId}
-              >
-                <option value="">Pilih Kelompok</option>
-                {kelompokList.map((k) => (
-                  <option key={k.id} value={k.id}>
-                    {k.nama}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
 
           <div className="form-row">
             <div className="form-group">

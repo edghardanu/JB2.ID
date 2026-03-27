@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { users, desa, kelompok, generus } from "@/lib/schema";
+import { usersOld, desa, kelompok, generus, mandiri } from "@/lib/schema";
 import { eq, or, like, sql, and } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { getSession } from "@/lib/auth";
@@ -14,25 +14,25 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const search = searchParams.get("search") || "";
+    const search = (searchParams.get("search") || "").trim();
     const page = Number(searchParams.get("page") || "1");
     const limit = Number(searchParams.get("limit") || "50");
     const offset = (page - 1) * limit;
 
-     const roleParam = searchParams.get("role");
- 
-     const conditions = [];
-     if (search) {
-       conditions.push(or(
-         like(users.name, `%${search}%`),
-         like(users.email, `%${search}%`)
-       ));
-     }
-     if (roleParam) {
-       conditions.push(eq(users.role, roleParam as any));
-     }
- 
-     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    const roleParam = searchParams.get("role");
+
+    const conditions = [];
+    if (search) {
+      conditions.push(or(
+        like(usersOld.name, `%${search}%`),
+        like(usersOld.email, `%${search}%`)
+      ));
+    }
+    if (roleParam) {
+      conditions.push(eq(usersOld.role, roleParam as any));
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     const isAll = searchParams.get("all") === "true";
 
@@ -40,17 +40,17 @@ export async function GET(request: NextRequest) {
     if (isAll) {
       const data = await db
         .select({
-          id: users.id,
-          name: users.name,
-          email: users.email,
+          id: usersOld.id,
+          name: usersOld.name,
+          email: usersOld.email,
           desaNama: desa.nama,
           kelompokNama: kelompok.nama,
         })
-        .from(users)
-        .leftJoin(desa, eq(users.desaId, desa.id))
-        .leftJoin(kelompok, eq(users.kelompokId, kelompok.id))
+        .from(usersOld)
+        .leftJoin(desa, eq(usersOld.desaId, desa.id))
+        .leftJoin(kelompok, eq(usersOld.kelompokId, kelompok.id))
         .where(whereClause)
-        .orderBy(users.name);
+        .orderBy(usersOld.name);
 
       if (searchParams.get("format") === "csv") {
         const csvHeader = "Nama Lengkap,Desa,Kelompok,Email,Password Default\n";
@@ -67,35 +67,45 @@ export async function GET(request: NextRequest) {
         });
       }
 
-      return NextResponse.json({ data, total: data.length, page: 1, limit: data.length });
+      return NextResponse.json({ data, total: data.length, page: 1, limit: data.length }, {
+        headers: { "Cache-Control": "private, max-age=60" }
+      });
     }
 
-    // LIST MODE: Paginated
-    const data = await db
+    // LIST MODE: Paginated (Optimized Parallel Execution)
+    const dataQuery = db
       .select({
-        id: users.id,
-        name: users.name,
-        email: users.email,
-        role: users.role,
-        desaId: users.desaId,
-        kelompokId: users.kelompokId,
-        createdAt: users.createdAt,
+        id: usersOld.id,
+        name: usersOld.name,
+        email: usersOld.email,
+        role: usersOld.role,
+        desaId: usersOld.desaId,
+        kelompokId: usersOld.kelompokId,
+        createdAt: usersOld.createdAt,
+        generusNomorUnik: generus.nomorUnik,
+        isMandiri: sql<number>`CASE WHEN ${mandiri.id} IS NOT NULL THEN 1 ELSE 0 END`,
+        mandiriStatus: mandiri.statusMandiri,
+        mandiriNomorUrut: mandiri.nomorUrut
       })
-      .from(users)
+      .from(usersOld)
+      .leftJoin(generus, eq(usersOld.generusId, generus.id))
+      .leftJoin(mandiri, eq(generus.id, mandiri.generusId))
       .where(whereClause)
-      .orderBy(users.name)
+      .orderBy(usersOld.name)
       .limit(limit)
       .offset(offset);
 
-    const [{ count }] = await db
+    const countQuery = db
       .select({ count: sql<number>`count(*)` })
-      .from(users)
+      .from(usersOld)
       .where(whereClause);
+
+    const [data, countResult] = await Promise.all([dataQuery, countQuery]);
     
-    const total = Number(count || 0);
+    const total = Number(countResult[0]?.count || 0);
 
     return NextResponse.json({ data, total, page, limit }, {
-      headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
+      headers: { "Cache-Control": "private, s-maxage=30, stale-while-revalidate=60" }
     });
   } catch (error) {
     console.error(error);
@@ -112,14 +122,16 @@ export async function PUT(request: NextRequest) {
     const { id, role, desaId, kelompokId } = await request.json();
     if (!id) return NextResponse.json({ error: "ID diperlukan" }, { status: 400 });
 
-    const user = await db.query.users.findFirst({ where: eq(users.id, id) });
+    const user = await db.query.usersOld.findFirst({ where: eq(usersOld.id, id) });
     if (!user) return NextResponse.json({ error: "User tidak ditemukan" }, { status: 404 });
 
     let generusId = user.generusId;
 
-    if ((role === "generus" || role === "creator") && !generusId) {
+    const needsGenerusProfile = ["generus", "peserta", "creator"].includes(role);
+    if (needsGenerusProfile && !generusId) {
       generusId = uuidv4();
-      const nomorUnik = `G-${Math.floor(100000 + Math.random() * 900000)}`;
+      const prefix = role === "creator" ? "C" : role === "peserta" ? "P" : "G";
+      const nomorUnik = `${prefix}-${Math.floor(100000 + Math.random() * 900000)}`;
       
       let finalDesaId = desaId ? Number(desaId) : user.desaId;
       let finalKelompokId = kelompokId ? Number(kelompokId) : user.kelompokId;
@@ -147,12 +159,12 @@ export async function PUT(request: NextRequest) {
       });
     }
 
-    await db.update(users).set({ 
+    await db.update(usersOld).set({ 
       role: role || user.role, 
       desaId: desaId ? Number(desaId) : user.desaId, 
       kelompokId: kelompokId ? Number(kelompokId) : user.kelompokId, 
       generusId 
-    }).where(eq(users.id, id));
+    }).where(eq(usersOld.id, id));
     
     // Sinkronkan ke generus jika user memiliki generusId
     if (generusId) {
@@ -185,7 +197,7 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (!id) return NextResponse.json({ error: "ID diperlukan" }, { status: 400 });
-    await db.delete(users).where(eq(users.id, id));
+    await db.delete(usersOld).where(eq(usersOld.id, id));
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error(error);

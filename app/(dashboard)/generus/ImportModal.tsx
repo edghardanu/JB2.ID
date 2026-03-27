@@ -87,11 +87,13 @@ export default function ImportModal({ onClose, onSaved }: ImportModalProps) {
     const template = [
       {
         "Nama": "Ahmad",
+        "Email": "ahmad@example.com",
+        "Password": "password123",
         "Jenis Kelamin": "Laki-laki",
         "Kategori Usia": "SMA",
         "Tempat Lahir": "Jakarta",
         "Tanggal Lahir": "2008-05-20",
-        "Alamat": "Komlek Meruya Ilir",
+        "Alamat": "Komplek Meruya Ilir",
         "No Telp": "081234567890",
         "Desa": "Desa Sukamaju",
         "Kelompok": "Kelompok A - Desa Sukamaju"
@@ -114,7 +116,8 @@ export default function ImportModal({ onClose, onSaved }: ImportModalProps) {
         <div className="modal-body" style={{ padding: "0 30px 30px" }}>
             <div style={{ background: "#f8fafc", padding: "20px", borderRadius: "16px", marginBottom: "24px", border: "1px solid #e2e8f0" }}>
                <p style={{ fontSize: "14px", color: "#64748b", margin: 0, lineHeight: 1.6 }}>
-                  Gunakan kolom <b>Desa</b> dan <b>Kelompok</b> untuk sinkronisasi otomatis. Sistem akan membuat data wilayah baru jika belum terdaftar.
+                  Gunakan kolom <b>Desa</b> dan <b>Kelompok</b> untuk sinkronisasi otomatis. <br/>
+                  <b>Setiap baris akan otomatis dibuatkan akun Login.</b> Tambahkan kolom <b>Email</b> dan <b>Password</b> jika ingin menentukan manual, jika tidak sistem akan memberikannya secara otomatis menggunakan nomor unik.
                </p>
                <button onClick={downloadTemplate} className="btn btn-sm btn-secondary" style={{ marginTop: "12px", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: "8px", fontWeight: 600 }}>
                  📥 Download Template

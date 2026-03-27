@@ -1,10 +1,10 @@
-export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { generus, desa, kelompok } from "@/lib/schema";
+import { generus, desa, kelompok, users } from "@/lib/schema";
 import { eq, and } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
 import { v4 as uuidv4 } from "uuid";
+import bcrypt from "bcryptjs";
 
 function generateNomorUnik() {
   const prefix = "GNR";
@@ -59,7 +59,6 @@ export async function POST(request: NextRequest) {
 
     const getOrCreateDesa = async (name: string) => {
       let normalized = name.trim();
-      // Sinkronisasi: "Desa Bandara" itermasuk format "Desa XXX" disamakan menjadi "XXX"
       if (normalized.toLowerCase().startsWith("desa ")) {
         normalized = normalized.substring(5).trim();
       }
@@ -70,7 +69,6 @@ export async function POST(request: NextRequest) {
       if (!record) {
         const inserted = await db.insert(desa).values({ nama: normalized }).returning();
         record = inserted[0];
-        console.log(`Created new Desa: ${normalized} (${record.id})`);
       }
       
       desaCache.set(normalized, record!.id);
@@ -89,7 +87,6 @@ export async function POST(request: NextRequest) {
       if (!record) {
         const inserted = await db.insert(kelompok).values({ nama: normalized, desaId: dId }).returning();
         record = inserted[0];
-        console.log(`Created new Kelompok: ${normalized} in Desa ID ${dId}`);
       }
 
       kelompokCache.set(cacheKey, record!.id);
@@ -101,6 +98,8 @@ export async function POST(request: NextRequest) {
         const val = (keys: string[]) => getVal(item, keys);
         
         const namaRaw = val(["nama", "fullname", "nama lengkap"]);
+        const emailRaw = val(["email", "mail", "posel"]);
+        const passRaw = val(["password", "kata sandi"]);
         const jkRaw = val(["jenis kelamin", "jk", "gender", "sex"]);
         const kategoriRaw = val(["kategori usia", "kategori", "usia", "category"]);
         const desaRaw = val(["desa", "village"]);
@@ -124,28 +123,20 @@ export async function POST(request: NextRequest) {
 
         if (!dId || !kId) {
           results.failed++;
-          results.errors.push(`Baris "${namaRaw}": Desa/Kelompok tidak terdeteksi (Gunakan kolom 'Desa' dan 'Kelompok')`);
+          results.errors.push(`Baris "${namaRaw}": Desa/Kelompok tidak terdeteksi`);
           continue;
-        }
-
-        // Role restriction (optional security)
-        if ((session.role === "kelompok" || session.role === "tim_pnkb") && session.kelompokId && session.kelompokId !== kId) {
-           // If they are restricted, we force their own IDs unless they are admin
-           dId = session.desaId!;
-           kId = session.kelompokId!;
         }
 
         let nomorUnik = generateNomorUnik();
         let existing = await db.query.generus.findFirst({ where: eq(generus.nomorUnik, nomorUnik) });
-        let retries = 0;
-        while (existing && retries < 5) {
+        while (existing) {
           nomorUnik = generateNomorUnik();
           existing = await db.query.generus.findFirst({ where: eq(generus.nomorUnik, nomorUnik) });
-          retries++;
         }
 
+        const id = uuidv4();
         await db.insert(generus).values({
-          id: uuidv4(),
+          id,
           nomorUnik,
           nama: String(namaRaw),
           jenisKelamin: mapGender(jkRaw),
@@ -162,19 +153,42 @@ export async function POST(request: NextRequest) {
           hobi: String(val(["hobi", "hobby"]) || ""),
           makananMinumanFavorit: String(val(["makanan", "makanan favorit", "food"]) || ""),
           suku: String(val(["suku", "tribe"]) || ""),
-          createdBy: session.userId,
+          createdBy: "IMPORT_AUTO",
+          isGenerus: 1,
+        });
+
+        // --- AUTOMATIC USER ACCOUNT CREATION ---
+        let email = emailRaw ? String(emailRaw).toLowerCase().trim() : `${nomorUnik.toLowerCase()}@jb2.id`;
+        const passwordPlain = passRaw ? String(passRaw) : nomorUnik;
+        const passwordHash = await bcrypt.hash(passwordPlain, 10);
+
+        // Ensure email uniqueness for the account
+        let checkEmail = await db.query.users.findFirst({ where: eq(users.email, email) });
+        if (checkEmail) {
+            email = `${uuidv4().substring(0, 8)}_${email}`;
+        }
+
+        await db.insert(users).values({
+            id: uuidv4(),
+            name: String(namaRaw),
+            email: email,
+            passwordHash,
+            role: "generus",
+            generusId: id,
+            desaId: dId,
+            kelompokId: kId,
         });
 
         results.success++;
       } catch (e: any) {
         results.failed++;
-        results.errors.push(`Gagal: ${e.message}`);
+        results.errors.push(`Gagal pada "${item.nama || 'Tanpa Nama'}": ${e.message}`);
       }
     }
 
     return NextResponse.json({ 
       success: true, 
-      message: `${results.success} data berhasil diimport.`,
+      message: `${results.success} data generus & akun berhasil diimport.`,
       details: results
     });
   } catch (error: any) {

@@ -15,6 +15,10 @@ interface UserItem {
   desaNama: string | null;
   kelompokNama: string | null;
   createdAt: string | null;
+  generusNomorUnik: string | null;
+  isMandiri: number;
+  mandiriStatus: string | null;
+  mandiriNomorUrut: number | null;
 }
 
 interface DesaItem { id: number; nama: string; }
@@ -125,7 +129,7 @@ export default function AdminUsersPage() {
 
    const roleColors: Record<string, string> = {
     admin: "badge-red", pengurus_daerah: "badge-red", kmm_daerah: "badge-red",
-    desa: "badge-blue", kelompok: "badge-green", generus: "badge-purple",
+    desa: "badge-blue", kelompok: "badge-green", generus: "badge-purple", peserta: "badge-indigo",
     creator: "badge-orange", pending: "badge-gray", tim_pnkb: "badge-blue",
     admin_romantic_room: "badge-purple", admin_keuangan: "badge-blue",
     admin_kegiatan: "badge-orange",
@@ -172,9 +176,9 @@ export default function AdminUsersPage() {
                   <tr>
                     <th>Nama</th>
                     <th>Email</th>
+                    <th>Profil</th>
                     <th>Role</th>
-                    <th>Desa</th>
-                    <th>Kelompok</th>
+                    <th>Desa/Kelompok</th>
                     <th>Aksi</th>
                   </tr>
                 </thead>
@@ -182,32 +186,51 @@ export default function AdminUsersPage() {
                   {data.map((user) => (
                     <tr key={user.id}>
                       <td style={{ fontWeight: 500 }}>{user.name}</td>
-                      <td className="text-muted">{user.email}</td>
+                       <td className="text-muted">{user.email}</td>
+                      <td>
+                        <div className="flex flex-col gap-1">
+                          {user.generusNomorUnik ? (
+                            <span className="badge badge-purple" style={{ fontSize: 10, padding: "2px 4px" }}>
+                              Generus: #{user.generusNomorUnik}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400" style={{ fontSize: 10 }}>-</span>
+                          )}
+                          {user.isMandiri ? (
+                            <span className="badge badge-indigo" style={{ fontSize: 10, padding: "2px 4px" }}>
+                              Mandiri ({user.mandiriNomorUrut || "-"})
+                            </span>
+                          ) : null}
+                        </div>
+                      </td>
                       <td>
                         <span className={`badge ${roleColors[user.role] || "badge-gray"}`}>
                           {user.role}
                         </span>
                       </td>
                       <td>
-                        {["desa", "kelompok", "creator", "generus", "tim_pnkb"].includes(user.role) ? (
-                          <select className="form-control" style={{ padding: "4px 8px", fontSize: 12, minWidth: 100 }} value={user.desaId || ""} onChange={(e) => updateUser(user.id, { desaId: Number(e.target.value) })}>
-                            <option value="">Pilih Desa</option>
-                            {desaList.map(d => <option key={d.id} value={d.id}>{d.nama}</option>)}
-                          </select>
-                        ) : "-"}
-                      </td>
-                      <td>
-                        {["kelompok", "creator", "generus", "tim_pnkb"].includes(user.role) ? (
-                          <select className="form-control" style={{ padding: "4px 8px", fontSize: 12, minWidth: 100 }} value={user.kelompokId || ""} onChange={(e) => updateUser(user.id, { kelompokId: Number(e.target.value) })}>
-                            <option value="">Pilih Kelompok</option>
-                            {kelompokList.filter(k => !user.desaId || k.desaId === user.desaId).map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
-                          </select>
-                        ) : "-"}
+                        <div className="flex flex-col gap-1">
+                          {["desa", "kelompok", "creator", "generus", "peserta", "tim_pnkb"].includes(user.role) ? (
+                            <>
+                              <select className="form-control" style={{ padding: "4px 8px", fontSize: 11, minWidth: 120 }} value={user.desaId || ""} onChange={(e) => updateUser(user.id, { desaId: Number(e.target.value) })}>
+                                <option value="">Pilih Desa</option>
+                                {desaList.map(d => <option key={d.id} value={d.id}>{d.nama}</option>)}
+                              </select>
+                              {["kelompok", "creator", "generus", "peserta", "tim_pnkb"].includes(user.role) && (
+                                <select className="form-control" style={{ padding: "4px 8px", fontSize: 11, minWidth: 120 }} value={user.kelompokId || ""} onChange={(e) => updateUser(user.id, { kelompokId: Number(e.target.value) })}>
+                                  <option value="">Pilih Kelompok</option>
+                                  {kelompokList.filter(k => !user.desaId || k.desaId === user.desaId).map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
+                                </select>
+                              )}
+                            </>
+                          ) : "-"}
+                        </div>
                       </td>
                       <td>
                         <div className="flex gap-2">
                           <select className="form-control" style={{ padding: "4px 8px", fontSize: 12, width: "auto" }} value={user.role} onChange={(e) => updateUser(user.id, { role: e.target.value })}>
                             <option value="generus">Generus</option>
+                            <option value="peserta">Peserta (Mandiri)</option>
                             <option value="creator">Creator/Penulis</option>
                             <option value="kelompok">Pengurus Kelompok</option>
                             <option value="desa">Pengurus Desa</option>

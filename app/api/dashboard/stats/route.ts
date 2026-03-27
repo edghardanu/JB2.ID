@@ -26,7 +26,9 @@ export async function GET() {
       )
     );
 
-    const finalGenerusFilter = generusFilter ? and(generusFilter, roleExcludeFilter) : roleExcludeFilter;
+    const finalGenerusFilter = generusFilter 
+      ? and(generusFilter, roleExcludeFilter, eq(generus.isGenerus, 1)) 
+      : and(roleExcludeFilter, eq(generus.isGenerus, 1));
 
     const [generusCount, kegiatanCount, artikelCount, userCount, marriedCount, notMarriedCount] = await Promise.all([
       db.select({ count: sql<number>`count(DISTINCT ${generus.id})` }).from(generus).leftJoin(users, eq(generus.id, users.generusId)).where(finalGenerusFilter),

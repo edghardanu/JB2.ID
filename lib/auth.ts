@@ -9,7 +9,7 @@ export interface JWTPayload {
   userId: string;
   email: string;
   name: string;
-  role: "admin" | "pengurus_daerah" | "kmm_daerah" | "desa" | "kelompok" | "generus" | "creator" | "pending" | "tim_pnkb" | "admin_romantic_room" | "admin_keuangan" | "admin_kegiatan";
+  role: "admin" | "pengurus_daerah" | "kmm_daerah" | "desa" | "kelompok" | "generus" | "peserta" | "creator" | "pending" | "tim_pnkb" | "admin_romantic_room" | "admin_keuangan" | "admin_kegiatan";
   desaId: number | null;
   kelompokId: number | null;
   mandiriDesaId?: number | null;

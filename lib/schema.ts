@@ -39,6 +39,8 @@ export const generus = sqliteTable("generus", {
   kelompokId: integer("kelompok_id").references(() => kelompok.id, { onDelete: "cascade" }),
   mandiriDesaId: integer("mandiri_desa_id").references(() => mandiriDesa.id, { onDelete: "set null" }),
   mandiriKelompokId: integer("mandiri_kelompok_id").references(() => mandiriKelompok.id, { onDelete: "set null" }),
+  instagram: text("instagram"),
+  isGenerus: integer("is_generus").default(0),
   createdBy: text("created_by"),
   createdAt: text("created_at").default(sql`(datetime('now'))`),
   updatedAt: text("updated_at").default(sql`(datetime('now'))`),
@@ -51,6 +53,8 @@ export const generus = sqliteTable("generus", {
   kategoriUsiaIdx: index("generus_kategori_usia_idx").on(table.kategoriUsia),
   jenisKelaminIdx: index("generus_jenis_kelamin_idx").on(table.jenisKelamin),
   statusNikahIdx: index("generus_status_nikah_idx").on(table.statusNikah),
+  isGenerusIdx: index("generus_is_generus_idx").on(table.isGenerus),
+  noTelpIdx: index("generus_no_telp_idx").on(table.noTelp),
 }));
 
 export const users = sqliteTable("users", {
@@ -58,7 +62,7 @@ export const users = sqliteTable("users", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
-  role: text("role", { enum: ["admin", "pengurus_daerah", "kmm_daerah", "desa", "kelompok", "generus", "creator", "pending", "tim_pnkb", "admin_romantic_room", "admin_keuangan", "admin_kegiatan"] })
+  role: text("role", { enum: ["admin", "pengurus_daerah", "kmm_daerah", "desa", "kelompok", "generus", "peserta", "creator", "pending", "tim_pnkb", "admin_romantic_room", "admin_keuangan", "admin_kegiatan"] })
     .notNull()
     .default("pending"),
   desaId: integer("desa_id").references(() => desa.id, { onDelete: "set null" }),
@@ -74,7 +78,30 @@ export const users = sqliteTable("users", {
   kelompokIdIdx: index("users_kelompok_id_idx").on(table.kelompokId),
   mandiriDesaIdIdx: index("users_mandiri_desa_id_idx").on(table.mandiriDesaId),
   mandiriKelompokIdIdx: index("users_mandiri_kelompok_id_idx").on(table.mandiriKelompokId),
+  roleIdx: index("users_role_idx").on(table.role),
+  generusIdIdx: index("users_generus_id_idx").on(table.generusId),
 }));
+export const usersOld = sqliteTable("users_old", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  role: text("role").notNull().default("generus"),
+  desaId: integer("desa_id"),
+  kelompokId: integer("kelompok_id"),
+  generusId: text("generus_id"),
+  createdAt: text("created_at").default(sql`(datetime('now'))`),
+}, (table) => ({
+  nameIdx: index("users_old_name_idx").on(table.name),
+  emailIdx: index("users_old_email_idx").on(table.email),
+  desaIdIdx: index("users_old_desa_id_idx").on(table.desaId),
+  kelompokIdIdx: index("users_old_kelompok_id_idx").on(table.kelompokId),
+  roleIdx: index("users_old_role_idx").on(table.role),
+  generusIdIdx: index("users_old_generus_id_idx").on(table.generusId),
+}));
+
+export type UserOld = typeof usersOld.$inferSelect;
+export type NewUserOld = typeof usersOld.$inferInsert;
 
 export const kegiatan = sqliteTable("kegiatan", {
   id: text("id").primaryKey(),
@@ -132,11 +159,14 @@ export const mandiri = sqliteTable("mandiri", {
   generusId: text("generus_id")
     .notNull()
     .references(() => generus.id, { onDelete: "cascade" }),
+  nomorUrut: integer("nomor_urut"),
   statusMandiri: text("status_pdkt", { enum: ["Aktif", "Selesai", "Batal"] }).default("Aktif"),
   catatan: text("catatan"),
   createdAt: text("created_at").default(sql`(datetime('now'))`),
   updatedAt: text("updated_at").default(sql`(datetime('now'))`),
-});
+}, (table) => ({
+  generusIdIdx: index("mandiri_generus_id_idx").on(table.generusId),
+}));
 
 export const mandiriDesa = sqliteTable("mandiri_desa", {
   id: integer("id").primaryKey({ autoIncrement: true }),

@@ -13,7 +13,7 @@ export async function GET() {
     }
     const data = await db.select().from(desa).orderBy(desa.nama);
     return NextResponse.json(data, {
-      headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
+      headers: { "Cache-Control": "private, s-maxage=60, stale-while-revalidate=120" },
     });
   } catch (error) {
     console.error(error);

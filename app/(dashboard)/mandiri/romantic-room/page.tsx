@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Swal from "sweetalert2";
-import { Heart, MessageSquare, User, Phone, MapPin, ClipboardList, CheckCircle, Star, Download, Sparkles, Send, Timer } from "lucide-react";
+import { Heart, MessageSquare, User, Phone, MapPin, ClipboardList, CheckCircle, Star, Download, Sparkles, Send, Timer, Globe } from "lucide-react";
 import { GenerusItem } from "@/lib/types";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -228,9 +228,30 @@ export default function RomanticRoomPage() {
                     <div className="partner-info">
                         <h2>{target.nama}</h2>
                         <p className="partner-tagline">Peserta Pilihan Anda</p>
-                        <div className="partner-meta">
-                            <span><MapPin size={14} /> {target.desaNama} / {target.kelompokNama}</span>
-                            <span><Heart size={14} /> {target.jenisKelamin === 'L' ? 'Laki-laki' : 'Perempuan'}</span>
+                        <div className="partner-meta" style={{ flexWrap: "wrap", marginTop: "12px", gap: "10px" }}>
+                            <span style={{ background: "rgba(255,255,255,0.2)", padding: "4px 10px", borderRadius: "8px", fontSize: "12px" }}>
+                                <MapPin size={12} /> {target.desaNama} / {target.kelompokNama}
+                            </span>
+                            {["admin", "admin_romantic_room", "tim_pnkb", "pengurus_daerah"].includes(myProfile?.role || "") && (
+                                <span style={{ background: "rgba(255,255,255,0.2)", padding: "4px 10px", borderRadius: "8px", fontSize: "12px" }}>
+                                    <User size={12} />
+                                    {(() => {
+                                        if (!target.tanggalLahir) return "-";
+                                        const birthDate = new Date(target.tanggalLahir);
+                                        if (isNaN(birthDate.getTime())) return "-";
+                                        const today = new Date();
+                                        let age = today.getFullYear() - birthDate.getFullYear();
+                                        const m = today.getMonth() - birthDate.getMonth();
+                                        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) { age--; }
+                                        return age + " Thn";
+                                    })()}
+                                </span>
+                            )}
+                            {["admin", "admin_romantic_room", "tim_pnkb", "pengurus_daerah"].includes(myProfile?.role || "") && target.instagram && (
+                                <span style={{ background: "rgba(255,255,255,0.2)", padding: "4px 10px", borderRadius: "8px", fontSize: "12px" }}>
+                                    <Globe size={12} /> @{target.instagram}
+                                </span>
+                            )}
                         </div>
                     </div>
                 </div>

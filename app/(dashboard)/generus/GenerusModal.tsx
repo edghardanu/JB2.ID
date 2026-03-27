@@ -35,6 +35,9 @@ const EMPTY_FORM = {
   kelompokId: "",
   mandiriDesaId: "",
   mandiriKelompokId: "",
+  instagram: "",
+  email: "",
+  password: "",
 };
 
 function itemToForm(src: GenerusItem) {
@@ -57,6 +60,9 @@ function itemToForm(src: GenerusItem) {
     kelompokId: String(src.kelompokId || ""),
     mandiriDesaId: String(src.mandiriDesaId || ""),
     mandiriKelompokId: String(src.mandiriKelompokId || ""),
+    instagram: src.instagram || "",
+    email: src.email || "",
+    password: "",
   };
 }
 
@@ -165,6 +171,8 @@ export default function GenerusModal({ item, onClose, onSaved, isMandiri }: Prop
           kelompokId: isMandiri ? null : (form.kelompokId ? Number(form.kelompokId) : null),
           mandiriDesaId: isMandiri ? (form.mandiriDesaId ? Number(form.mandiriDesaId) : null) : null,
           mandiriKelompokId: isMandiri ? (form.mandiriKelompokId ? Number(form.mandiriKelompokId) : null) : null,
+          email: form.email,
+          password: form.password,
         }),
       });
 
@@ -468,6 +476,11 @@ export default function GenerusModal({ item, onClose, onSaved, isMandiri }: Prop
                 <input name="pekerjaan" className="form-control" value={form.pekerjaan} onChange={handleChange} required placeholder="Pekerjaan saat ini" />
               </div>
 
+              <div className="form-group">
+                <label className="form-label">Akun Instagram (Opsional)</label>
+                <input name="instagram" className="form-control" value={form.instagram} onChange={handleChange} placeholder="username_tanpa_at" />
+              </div>
+
               <div className="form-row">
                  <div className="form-group">
                    <label className="form-label">Hobi <span className="required">*</span></label>
@@ -484,6 +497,27 @@ export default function GenerusModal({ item, onClose, onSaved, isMandiri }: Prop
               <div className="form-group" style={{ marginBottom: isMandiri ? 0 : 20 }}>
                 <label className="form-label">Favorit Makanan/Minuman <span className="required">*</span></label>
                 <input name="makananMinumanFavorit" className="form-control" value={form.makananMinumanFavorit} onChange={handleChange} required placeholder="Favorit..." />
+              </div>
+
+              <div style={{ marginTop: "20px", padding: "15px", background: "#f8fafc", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+                <p style={{ fontWeight: 600, fontSize: "14px", marginBottom: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
+                   <span style={{ fontSize: "18px" }}>🔐</span> Akun Login (Opsional)
+                </p>
+                <div className="form-row">
+                   <div className="form-group">
+                     <label className="form-label">Email Login</label>
+                     <input name="email" className="form-control" value={form.email} onChange={handleChange} placeholder="Email untuk login..." style={{ background: "#fff" }} />
+                   </div>
+                   <div className="form-group">
+                     <label className="form-label">{isEdit ? "Ubah Password" : "Password Login"}</label>
+                     <input name="password" type="password" className="form-control" value={form.password} onChange={handleChange} placeholder={isEdit ? "Kosongkan jika tidak diubah" : "Kosongkan untuk otomatis"} style={{ background: "#fff" }} />
+                   </div>
+                </div>
+                {!isEdit && (
+                  <p style={{ fontSize: "11px", color: "#64748b", marginTop: "4px" }}>
+                    Jika dikosongkan, sistem akan otomatis menggunakan <b>Nomor Unik</b> sebagai Email & Password.
+                  </p>
+                )}
               </div>
             </div>
 

@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { generus, desa, kelompok, users, mandiri } from "@/lib/schema";
+import { generus, desa, kelompok, usersOld, mandiri, mandiriDesa, mandiriKelompok } from "@/lib/schema";
 import { eq, and, or, like, sql, not, isNull, isNotNull, ne, inArray, notInArray } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
 import { v4 as uuidv4 } from "uuid";
@@ -21,11 +21,21 @@ function buildWhereClause(
   kelompokId?: string,
   jenisKelamin?: string,
   status?: string,
-  kategoriUsia?: string
+  kategoriUsia?: string,
+  notInMandiri?: boolean,
+  isGenerus?: boolean
 ) {
   const conditions: any[] = [];
+  
+  if (isGenerus) {
+    conditions.push(eq(generus.isGenerus, 1));
+  }
+  
+  if (notInMandiri) {
+    conditions.push(isNull(mandiri.id));
+  }
 
-  // 1. Role-based restrictions (skip if ignoreRoleRestriction is true, usually for admin exports)
+  // 1. Role-based restrictions
   if (!ignoreRoleRestriction) {
     if ((session?.role === "desa" || (session?.role === "tim_pnkb" && !session.kelompokId)) && session.desaId) {
       conditions.push(eq(generus.desaId, session.desaId));
@@ -34,8 +44,7 @@ function buildWhereClause(
     }
   }
 
-  // 2. Explicit User Filters (Always apply if provided)
-  // For admin/pengurus_daerah, they can explicitly filter by desa/kelompok
+  // 2. Explicit User Filters
   if (desaId) {
     conditions.push(eq(generus.desaId, Number(desaId)));
   }
@@ -53,14 +62,20 @@ function buildWhereClause(
   }
 
   if (search) {
-    conditions.push(
-      or(
-        like(generus.nama, `%${search}%`),
-        like(generus.nomorUnik, `%${search}%`),
-        like(desa.nama, `%${search}%`),
-        like(kelompok.nama, `%${search}%`)
-      )
-    );
+    const isGnrCode = /^GNR\d+$/i.test(search.trim());
+    if (isGnrCode) {
+      // Exact match for codes is much faster
+      conditions.push(eq(generus.nomorUnik, search.trim().toUpperCase()));
+    } else {
+      conditions.push(
+        or(
+          like(generus.nama, `%${search}%`),
+          like(generus.nomorUnik, `%${search}%`),
+          like(desa.nama, `%${search}%`),
+          like(kelompok.nama, `%${search}%`)
+        )
+      );
+    }
   }
 
   if (jenisKelamin && (jenisKelamin === "L" || jenisKelamin === "P")) {
@@ -68,17 +83,12 @@ function buildWhereClause(
   }
 
   if (status === "panitia") {
-    conditions.push(not(or(isNull(users.role), eq(users.role, "generus"))!));
+    conditions.push(not(or(isNull(usersOld.role), eq(usersOld.role, "generus"))!));
   } else if (status === "peserta") {
-    conditions.push(or(isNull(users.role), eq(users.role, "generus")));
-  } else {
-    // Default: Exclude specific administrative roles as requested
-    conditions.push(
-      or(
-        isNull(users.role),
-        notInArray(users.role, ["tim_pnkb", "pengurus_daerah", "kmm_daerah", "desa", "kelompok", "creator"])
-      )
-    );
+    conditions.push(or(isNull(usersOld.role), eq(usersOld.role, "generus")));
+  } else if (status === "all" && isGenerus) {
+     // If we are in the main Data Generus view (isGenerus=1), we can skip the role check join 
+     // for the 'all' view to maximize performance. The isGenerus flag is our source of truth here.
   }
 
   return (conditions.length > 0 ? and(...conditions) : undefined) as any;
@@ -90,53 +100,77 @@ export async function GET(request: NextRequest) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
-    const search = searchParams.get("search") || "";
+    const search = (searchParams.get("search") || "").trim();
     const statusNikah = searchParams.get("statusNikah") || "all";
     const desaId = searchParams.get("desaId") || "";
     const kelompokId = searchParams.get("kelompokId") || "";
     const page = Number(searchParams.get("page") || "1");
-    const limit = Number(searchParams.get("limit") || "20");
+    const limit = Number(searchParams.get("limit") || "10");
     const all = searchParams.get("all") === "true";
     const mandiriOnly = searchParams.get("mandiriOnly") === "true";
+    let notInMandiri = searchParams.get("notInMandiri") === "true";
+    let filterIsGenerus = false;
+
+    if (!all && !mandiriOnly) {
+      filterIsGenerus = true;
+    }
+
     const jenisKelamin = searchParams.get("jenisKelamin") || "all";
     const status = searchParams.get("status") || "all";
     const kategoriUsia = searchParams.get("kategoriUsia") || "all";
     const offset = (page - 1) * limit;
 
-    const finalWhere = buildWhereClause(session, search, all, statusNikah, desaId, kelompokId, jenisKelamin, status, kategoriUsia);
+    const finalWhere = buildWhereClause(
+      session, search, all, statusNikah, desaId, kelompokId, 
+      jenisKelamin, status, kategoriUsia, notInMandiri, filterIsGenerus
+    );
 
     const isExport = all === true;
 
-    // HIGHLY OPTIMIZED QUERY FOR BULK EXPORTS
     if (isExport) {
       let query = db
         .select({
           id: generus.id,
+          nomorUnik: generus.nomorUnik,
           nama: generus.nama,
-          email: users.email,
+          email: usersOld.email,
           desaNama: desa.nama,
           kelompokNama: kelompok.nama,
+          foto: generus.foto,
+          instagram: generus.instagram,
+          tanggalLahir: generus.tanggalLahir,
+          tempatLahir: generus.tempatLahir,
+          kategoriUsia: generus.kategoriUsia,
+          jenisKelamin: generus.jenisKelamin,
+          nomorUrut: mandiri.nomorUrut,
+          mandiriDesaNama: mandiriDesa.nama,
+          mandiriKelompokNama: mandiriKelompok.nama,
         })
         .from(generus)
-        .leftJoin(users, eq(generus.id, users.generusId))
+        .leftJoin(usersOld, eq(generus.id, usersOld.generusId))
         .leftJoin(desa, eq(generus.desaId, desa.id))
-        .leftJoin(kelompok, eq(generus.kelompokId, kelompok.id));
+        .leftJoin(kelompok, eq(generus.kelompokId, kelompok.id))
+        .leftJoin(mandiriDesa, eq(generus.mandiriDesaId, mandiriDesa.id))
+        .leftJoin(mandiriKelompok, eq(generus.mandiriKelompokId, mandiriKelompok.id));
 
       if (mandiriOnly) {
         query = (query as any).innerJoin(mandiri, eq(generus.id, mandiri.generusId));
+      } else {
+        query = (query as any).leftJoin(mandiri, eq(generus.id, mandiri.generusId));
       }
 
       const data = await query.where(finalWhere).orderBy(generus.nama);
 
       return NextResponse.json(
         { data, total: data.length, page: 1, limit: data.length },
-        { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } }
+        { headers: { "Cache-Control": "private, max-age=60" } }
       );
     }
 
-    // NORMAL PAGINATED QUERY (OPTIMIZED: SELECTED COLUMNS ONLY)
-    let dataQuery = db
-      .select({
+    const canSeePrivateData = ["admin", "kmm_daerah", "admin_romantic_room", "pengurus_daerah", "tim_pnkb"].includes(session.role);
+
+    // NORMAL PAGINATED QUERY (OPTIMIZED: JOIN ONLY NECESSARY TABLES)
+    const dataQuerySelect = {
         id: generus.id,
         nomorUnik: generus.nomorUnik,
         nama: generus.nama,
@@ -149,31 +183,32 @@ export async function GET(request: NextRequest) {
         kelompokNama: kelompok.nama,
         desaId: generus.desaId,
         kelompokId: generus.kelompokId,
-        role: users.role,
-        email: users.email,
+        role: usersOld.role,
+        email: usersOld.email,
         createdAt: generus.createdAt,
-        // Sensitive fields: Only for admin & kmm_daerah
-        ...((session.role === "admin" || session.role === "kmm_daerah" || session.role === "admin_romantic_room" || session.role === "pengurus_daerah" || session.role === "tim_pnkb")
-          ? {
-              noTelp: generus.noTelp,
-              alamat: generus.alamat,
-            }
-          : {}),
-      })
+        noTelp: canSeePrivateData ? generus.noTelp : sql`NULL`,
+    };
+
+    let dataQuery = db
+      .select(dataQuerySelect)
       .from(generus)
       .leftJoin(desa, eq(generus.desaId, desa.id))
       .leftJoin(kelompok, eq(generus.kelompokId, kelompok.id))
-      .leftJoin(users, eq(generus.id, users.generusId));
+      .leftJoin(usersOld, eq(generus.id, usersOld.generusId));
 
     if (mandiriOnly) {
       dataQuery = (dataQuery as any).innerJoin(mandiri, eq(generus.id, mandiri.generusId));
     }
 
-    // Optimized Count Query: Avoid unnecessary joins
+    // Optimized Count Query: Avoid unnecessary joins for simple counts
     const countQuery = db
-      .select({ count: sql<number>`count(DISTINCT ${generus.id})` })
-      .from(generus)
-      .leftJoin(users, eq(generus.id, users.generusId)); // Still needed for roleFilter in finalWhere
+      .select({ count: sql<number>`count(*)` })
+      .from(generus);
+
+    // Only join usersOld if status filtering is happening and it's not simply 'all'
+    if (status !== "all" || search) {
+      countQuery.leftJoin(usersOld, eq(generus.id, usersOld.generusId));
+    }
 
     if (search) {
       countQuery.leftJoin(desa, eq(generus.desaId, desa.id));
@@ -195,7 +230,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(
       { data, total: Number(countResult[0]?.count || 0), page, limit },
-      { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } }
+      { headers: { "Cache-Control": "private, s-maxage=30, stale-while-revalidate=60" } }
     );
   } catch (error: any) {
     console.error("Generus GET error details:", error);
@@ -278,6 +313,32 @@ export async function POST(request: NextRequest) {
       suku,
       foto,
       createdBy: session.userId,
+      isGenerus: 1,
+    });
+
+    // AUTO-CREATE USER ACCOUNT for Generus role (in usersOld)
+    const { email: customEmail, password: customPassword } = body;
+    let finalEmail = customEmail ? customEmail.toLowerCase() : `${nomorUnik.toLowerCase()}@jb2.id`;
+    const finalPassword = customPassword || nomorUnik;
+    
+    // Check email uniqueness in usersOld
+    const existingEmail = await db.query.usersOld.findFirst({ where: eq(usersOld.email, finalEmail) });
+    if (existingEmail) {
+        finalEmail = `${uuidv4().substring(0, 4)}_${finalEmail}`;
+    }
+
+    const bcrypt = await import("bcryptjs");
+    const passwordHash = await bcrypt.hash(finalPassword, 10);
+
+    await db.insert(usersOld).values({
+        id: uuidv4(),
+        name: nama,
+        email: finalEmail,
+        passwordHash, 
+        role: "generus",
+        generusId: id,
+        desaId: desaId ? Number(desaId) : null,
+        kelompokId: kelompokId ? Number(kelompokId) : null,
     });
 
     return NextResponse.json({ success: true, id, nomorUnik });

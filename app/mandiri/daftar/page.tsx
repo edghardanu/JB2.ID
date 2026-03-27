@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Swal from "sweetalert2";
+import Link from "next/link";
 
 interface Desa { id: number; nama: string; kota: string; }
 interface Kelompok { id: number; nama: string; }
@@ -24,6 +25,8 @@ export default function MandiriDaftarPage() {
     foto: "",
     mandiriDesaId: "",
     mandiriKelompokId: "",
+    instagram: "",
+    email: "",
   });
 
   const [desaList, setDesaList] = useState<Desa[]>([]);
@@ -129,10 +132,18 @@ export default function MandiriDaftarPage() {
         body: JSON.stringify(form),
       });
       const data = await res.json();
+      
+      if (data.isAlreadyRegistered) {
+          setSuccess(true);
+          setResult({ ...data, alreadyExists: true });
+          Swal.fire({ icon: "info", title: "Sudah Terdaftar", text: "Anda sudah terdaftar sebagai peserta sebelumnya." });
+          return;
+      }
+
       if (!res.ok) throw new Error(data.error || "Gagal mendaftar");
       setSuccess(true);
       setResult(data);
-      Swal.fire({ icon: "success", title: "Berhasil!", text: "Data Anda telah tercatat." });
+      Swal.fire({ icon: "success", title: "Berhasil!", text: "Data Anda telah tercatat dan akun telah dibuat." });
     } catch (err: any) {
       Swal.fire({ icon: "error", title: "Gagal", text: err.message });
     } finally {
@@ -153,10 +164,33 @@ export default function MandiriDaftarPage() {
             <p style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>Nomor Unik Anda:</p>
             <h3 style={{ fontSize: "24px", color: "var(--primary)", letterSpacing: "2px" }}>{result?.nomorUnik}</h3>
           </div>
-          <p style={{ fontSize: "13px", color: "var(--text-muted)", marginBottom: "24px" }}>
-              Silakan simpan nomor unik ini untuk keperluan absensi dan kegiatan mendatang.
-          </p>
-          <button className="btn btn-primary btn-full" onClick={() => window.location.reload()}>
+          
+          {result?.alreadyExists ? (
+            <>
+               <p style={{ fontSize: "13.5px", color: "#1e293b", marginBottom: "24px", lineHeight: "1.5" }}>
+                  Anda sudah terdaftar sebagai peserta. Silakan masuk ke akun Anda menggunakan email yang telah didaftarkan.
+               </p>
+               <Link href="/katalog" className="btn btn-primary btn-full" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  <span>Buka Katalog Mandiri</span>
+               </Link>
+            </>
+          ) : (
+            <>
+              <div style={{ background: "#f0fdf4", padding: "16px", borderRadius: "10px", marginBottom: "24px", textAlign: "left", border: "1px solid #dcfce7" }}>
+                <p style={{ fontSize: "14px", fontWeight: "700", color: "#166534", marginBottom: "8px" }}>Akun Anda Sudah Aktif! 🚀</p>
+                <p style={{ fontSize: "13px", color: "#166534", marginBottom: "10px" }}>Silakan login dengan detail berikut:</p>
+                <div style={{ fontSize: "13px" }}>
+                    <b>Email:</b> {result?.email}<br/>
+                    <b>Password:</b> {result?.nomorUnik}
+                </div>
+              </div>
+              <Link href="/login" className="btn btn-primary btn-full">
+                Login Sekarang
+              </Link>
+            </>
+          )}
+
+          <button className="btn btn-secondary btn-full" style={{ marginTop: "12px" }} onClick={() => window.location.reload()}>
             Kembali ke Form
           </button>
         </div>
@@ -210,6 +244,22 @@ export default function MandiriDaftarPage() {
                         Batas waktu pengisian: <b>{new Date(deadline).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</b>
                     </div>
                 )}
+
+                <div style={{ 
+                    marginTop: 16, padding: "16px", borderRadius: 12, 
+                    background: "#f0fdf4", color: "#166534", fontSize: 13,
+                    border: "1px solid #dcfce7", lineHeight: "1.6"
+                }}>
+                    <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "8px" }}>
+                        <span style={{ fontSize: "18px" }}>🚀</span>
+                        <b style={{ fontSize: "14px" }}>Alur Pendaftaran Peserta</b>
+                    </div>
+                    <ol style={{ paddingLeft: "20px", margin: "5px 0" }}>
+                        <li>Isi formulir lengkap di bawah ini.</li>
+                        <li>Dapatkan <b>Nomor Unik Mandiri</b> setelah berhasil mendaftar (simpan nomor tersebut).</li>
+                        <li>Gunakan nomor tersebut untuk <a href="/register" style={{ color: "#059669", fontWeight: "700", textDecoration: "underline" }}>Membuat Akun</a> agar dapat mengakses fitur full sistem.</li>
+                    </ol>
+                </div>
             
             <form onSubmit={handleSubmit}>
                 <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
@@ -241,6 +291,14 @@ export default function MandiriDaftarPage() {
                         <input name="nama" className="form-control" value={form.nama} onChange={handleChange} required placeholder="Masukkan nama lengkap" />
                         <p style={{ fontSize: "10.5px", color: "var(--text-muted)", marginTop: "4px" }}>
                             Contoh Format Penulisan: Raka Gladhi Pratama (Tanpa disingkat dan huruf kapital pada setiap awal kata)
+                        </p>
+                    </div>
+
+                    <div className="form-group">
+                        <label className="form-label">Alamat Email <span className="required">*</span></label>
+                        <input name="email" type="email" className="form-control" value={form.email} onChange={handleChange} required placeholder="email_anda@gmail.com" />
+                        <p style={{ fontSize: "10.5px", color: "var(--text-muted)", marginTop: "4px" }}>
+                            Email ini akan digunakan untuk login ke dalam sistem.
                         </p>
                     </div>
 
@@ -326,6 +384,24 @@ export default function MandiriDaftarPage() {
                             <label className="form-label">Favorit Makanan/Minuman <span className="required">*</span></label>
                             <input name="makananMinumanFavorit" className="form-control" value={form.makananMinumanFavorit} onChange={handleChange} required placeholder="Sate / Jus / dll" />
                         </div>
+                    </div>
+
+                    <div className="form-group">
+                        <label className="form-label">Akun Instagram (Opsional)</label>
+                        <div style={{ display: "flex", alignItems: "center", position: "relative" }}>
+                            <span style={{ position: "absolute", left: "10px", color: "var(--text-muted)" }}>@</span>
+                            <input 
+                                name="instagram" 
+                                className="form-control" 
+                                value={form.instagram} 
+                                onChange={handleChange} 
+                                placeholder="username_kamu" 
+                                style={{ paddingLeft: "30px" }}
+                            />
+                        </div>
+                        <p style={{ fontSize: "10.5px", color: "var(--text-muted)", marginTop: "4px" }}>
+                            Gunakan username Instagram tanpa simbol @.
+                        </p>
                     </div>
 
                     <div className="form-group">

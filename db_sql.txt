@@ -1,0 +1,25 @@
+USERS: CREATE TABLE users (
+              id TEXT PRIMARY KEY,
+              name TEXT NOT NULL,
+              email TEXT NOT NULL UNIQUE,
+              password_hash TEXT NOT NULL,
+              role TEXT NOT NULL DEFAULT 'pending',
+              desa_id INTEGER,
+              kelompok_id INTEGER,
+              mandiri_desa_id INTEGER,
+              mandiri_kelompok_id INTEGER,
+              generus_id TEXT,
+              created_at TEXT DEFAULT (datetime('now'))
+            )
+
+USERS_OLD: CREATE TABLE users_old (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          email TEXT NOT NULL UNIQUE,
+          password_hash TEXT NOT NULL,
+          role TEXT NOT NULL DEFAULT 'generus',
+          desa_id INTEGER,
+          kelompok_id INTEGER,
+          generus_id TEXT,
+          created_at TEXT DEFAULT (datetime('now'))
+        )

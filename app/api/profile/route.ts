@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse, NextRequest } from "next/server";
 import { db } from "@/lib/db";
-import { generus, desa, kelompok, users, mandiri } from "@/lib/schema";
+import { generus, desa, kelompok, users, mandiri, mandiriDesa } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { getSession, setSession } from "@/lib/auth";
 import { v4 as uuidv4 } from "uuid";
@@ -79,13 +79,17 @@ export async function GET() {
         makananMinumanFavorit: generus.makananMinumanFavorit,
         suku: generus.suku,
         foto: generus.foto,
+        instagram: generus.instagram,
         desaNama: desa.nama,
         kelompokNama: kelompok.nama,
+        mandiriDesaNama: mandiriDesa.nama,
+        kota: mandiriDesa.kota,
         createdAt: generus.createdAt,
       })
       .from(generus)
       .leftJoin(desa, eq(generus.desaId, desa.id))
       .leftJoin(kelompok, eq(generus.kelompokId, kelompok.id))
+      .leftJoin(mandiriDesa, eq(generus.mandiriDesaId, mandiriDesa.id))
       .where(eq(generus.id, session.generusId))
       .limit(1);
 
@@ -101,6 +105,7 @@ export async function GET() {
     const profile = {
       ...data[0],
       role: session.role,
+      nomorUrut: mandiriData?.nomorUrut || null,
       isInPdkt: !!mandiriData || ["admin", "pengurus_daerah", "kmm_daerah", "desa", "kelompok", "tim_pnkb", "admin_romantic_room"].includes(session.role)
     };
 
@@ -185,20 +190,24 @@ export async function PUT(request: NextRequest) {
           makananMinumanFavorit: generus.makananMinumanFavorit,
           suku: generus.suku,
           foto: generus.foto,
+          instagram: generus.instagram,
           desaNama: desa.nama,
           kelompokNama: kelompok.nama,
+          mandiriDesaNama: mandiriDesa.nama,
+          kota: mandiriDesa.kota,
           createdAt: generus.createdAt,
         })
         .from(generus)
         .leftJoin(desa, eq(generus.desaId, desa.id))
         .leftJoin(kelompok, eq(generus.kelompokId, kelompok.id))
+        .leftJoin(mandiriDesa, eq(generus.mandiriDesaId, mandiriDesa.id))
         .where(eq(generus.id, newGenerusId))
         .limit(1);
 
       return NextResponse.json({ success: true, data: { ...updatedData[0], role: session.role } });
     }
 
-    const { nama, tempatLahir, tanggalLahir, jenisKelamin, kategoriUsia, alamat, noTelp, pendidikan, pekerjaan, statusNikah, hobi, makananMinumanFavorit, suku, foto } = await request.json();
+    const { nama, tempatLahir, tanggalLahir, jenisKelamin, kategoriUsia, alamat, noTelp, pendidikan, pekerjaan, statusNikah, hobi, makananMinumanFavorit, suku, foto, instagram } = await request.json();
 
     await db
       .update(generus)
@@ -217,6 +226,7 @@ export async function PUT(request: NextRequest) {
         makananMinumanFavorit,
         suku,
         foto,
+        instagram,
         updatedAt: new Date().toISOString(),
       })
       .where(eq(generus.id, session.generusId));
@@ -247,13 +257,17 @@ export async function PUT(request: NextRequest) {
         makananMinumanFavorit: generus.makananMinumanFavorit,
         suku: generus.suku,
         foto: generus.foto,
+        instagram: generus.instagram,
         desaNama: desa.nama,
         kelompokNama: kelompok.nama,
+        mandiriDesaNama: mandiriDesa.nama,
+        kota: mandiriDesa.kota,
         createdAt: generus.createdAt,
       })
       .from(generus)
       .leftJoin(desa, eq(generus.desaId, desa.id))
       .leftJoin(kelompok, eq(generus.kelompokId, kelompok.id))
+      .leftJoin(mandiriDesa, eq(generus.mandiriDesaId, mandiriDesa.id))
       .where(eq(generus.id, session.generusId))
       .limit(1);
 

@@ -22,19 +22,27 @@ export default function GenerusKatalogPage() {
   const [selections, setSelections] = useState<any[]>([]);
   const [myQueues, setMyQueues] = useState<any[]>([]);
   const limit = 12;
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const fetchData = useCallback(async () => {
     if (!isAuthorized) return;
     setLoading(true);
     try {
+      const isAdminRole = ["admin", "pengurus_daerah", "tim_pnkb", "admin_romantic_room", "kmm_daerah"].includes(myProfile?.role || "");
+      
       const params = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
-        search: search, // Using 'search' state variable
-        jenisKelamin: gender, // Using 'gender' state variable
-        status: status, // Using 'status' state variable
-        mandiriOnly: "true"
+        search: search,
+        jenisKelamin: gender,
+        status: status,
+        mandiriOnly: "true",
+        ...(isAdminRole ? { all: "true" } : {})
       });
       const res = await fetch(`/api/generus?${params}`, { cache: "no-store" });
 
@@ -77,7 +85,7 @@ export default function GenerusKatalogPage() {
         if (!profileRes.ok) throw new Error("Gagal mengambil profil");
         const profileJson = await profileRes.json();
         setMyProfile(profileJson);
-        setIsAuthorized(!!profileJson.isInPdkt || ["generus", "tim_pnkb", "admin", "kmm_daerah", "pengurus_daerah"].includes(profileJson.role));
+        setIsAuthorized(!!profileJson.isInPdkt || ["generus", "tim_pnkb", "admin", "kmm_daerah", "pengurus_daerah", "admin_romantic_room"].includes(profileJson.role));
         
         // Fetch activity info
         const activityRes = await fetch("/api/mandiri/kegiatan?limit=1", { cache: "no-store" });
@@ -141,6 +149,8 @@ export default function GenerusKatalogPage() {
   };
 
   const totalPages = Math.ceil(total / limit);
+
+  if (!mounted) return null;
 
   if (loading && !authorizedChecked) {
     return (
@@ -294,7 +304,7 @@ export default function GenerusKatalogPage() {
                       <div className="initials-compact">{myProfile.nama.charAt(0)}</div>
                     )}
                     <div className="category-pill-abs">
-                      {myProfile.role === 'kmm_daerah' ? 'Panitia' : myProfile.kategoriUsia}
+                      {["admin", "tim_pnkb", "admin_romantic_room", "kmm_daerah", "pengurus_daerah"].includes(myProfile.role || "") ? "Panitia" : myProfile.kategoriUsia}
                     </div>
                   </div>
                   <div className="profile-info-compact">
@@ -302,7 +312,37 @@ export default function GenerusKatalogPage() {
                     <div className="id-compact">ID: {myProfile.nomorUnik}</div>
                     <div className="loc-compact">
                       <MapPin size={10} />
-                      <span>{myProfile.desaNama} &bull; {myProfile.kelompokNama}</span>
+                      <span>{myProfile.mandiriDesaNama || myProfile.desaNama} &bull; {myProfile.mandiriKelompokNama || myProfile.kelompokNama}</span>
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "12px" }}>
+                       <div style={{ background: "#eff6ff", color: "#1e40af", padding: "6px 14px", borderRadius: "10px", fontSize: "12px", fontWeight: "900", display: "flex", alignItems: "center", gap: "6px", border: "1.5px solid #dbeafe" }}>
+                          <User size={14} strokeWidth={3} />
+                          <span style={{ opacity: 0.7, marginRight: "2px" }}>Umur:</span>
+                          {(() => {
+                            if (!myProfile.tanggalLahir) return "-";
+                            const birthDate = new Date(myProfile.tanggalLahir);
+                            if (isNaN(birthDate.getTime())) return "-";
+                            const today = new Date();
+                            let age = today.getFullYear() - birthDate.getFullYear();
+                            const m = today.getMonth() - birthDate.getMonth();
+                            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) { age--; }
+                            return age + " Tahun";
+                          })()}
+                       </div>
+                       {myProfile.instagram && (
+                         <div style={{ background: "#fdf2f8", color: "#be185d", padding: "6px 14px", borderRadius: "10px", fontSize: "12px", fontWeight: "900", display: "flex", alignItems: "center", gap: "6px", border: "1.5px solid #fce7f3" }}>
+                            <Globe size={14} strokeWidth={3} />
+                            <span style={{ opacity: 0.7, marginRight: "2px" }}>Instagram:</span>
+                            <a 
+                              href={`https://instagram.com/${myProfile.instagram}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              style={{ color: "inherit", textDecoration: "none" }}
+                            >
+                              @{myProfile.instagram}
+                            </a>
+                         </div>
+                       )}
                     </div>
                   </div>
                   {/* QR Code for Printing */}
@@ -375,15 +415,54 @@ export default function GenerusKatalogPage() {
                         <div className="initials-compact">{item.nama.charAt(0)}</div>
                       )}
                       <div className="category-pill-abs">
-                        {item.role === 'kmm_daerah' ? 'Panitia' : item.kategoriUsia}
+                        {["admin", "tim_pnkb", "admin_romantic_room", "kmm_daerah", "pengurus_daerah"].includes(item.role || "") ? "Panitia" : item.kategoriUsia}
                       </div>
                     </div>
                     <div className="profile-info-compact">
                       <h3 className="name-compact">{item.nama}</h3>
-                      <div className="id-compact">ID: {item.nomorUnik}</div>
+                      <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                        <div className="id-compact">ID: {item.nomorUnik}</div>
+                        {item.nomorUrut && (
+                          <div className="id-compact" style={{ color: "var(--primary)", background: "var(--primary-light)", padding: "0 4px", borderRadius: "4px" }}>
+                            #{item.nomorUrut}
+                          </div>
+                        )}
+                      </div>
                       <div className="loc-compact">
                         <MapPin size={10} />
-                        <span>{item.desaNama} &bull; {item.kelompokNama}</span>
+                        <span>{item.mandiriDesaNama || item.desaNama} &bull; {item.mandiriKelompokNama || item.kelompokNama}</span>
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "12px" }}>
+                        {["admin", "admin_romantic_room", "tim_pnkb", "pengurus_daerah"].includes(myProfile?.role || "") && (
+                           <div style={{ background: "#eff6ff", color: "#1e40af", padding: "4px 10px", borderRadius: "10px", fontSize: "11px", fontWeight: "900", display: "flex", alignItems: "center", gap: "4px", border: "1.5px solid #dbeafe" }}>
+                              <User size={12} strokeWidth={3} />
+                              <span style={{ opacity: 0.7, marginRight: "1px" }}>Umur:</span>
+                              {(() => {
+                                if (!item.tanggalLahir) return "-";
+                                const birthDate = new Date(item.tanggalLahir);
+                                if (isNaN(birthDate.getTime())) return "-";
+                                const today = new Date();
+                                let age = today.getFullYear() - birthDate.getFullYear();
+                                const m = today.getMonth() - birthDate.getMonth();
+                                if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) { age--; }
+                                return age + " Thn";
+                              })()}
+                           </div>
+                        )}
+                        {["admin", "admin_romantic_room", "tim_pnkb", "pengurus_daerah"].includes(myProfile?.role || "") && item.instagram && (
+                           <div style={{ background: "#fdf2f8", color: "#be185d", padding: "4px 10px", borderRadius: "10px", fontSize: "11px", fontWeight: "900", display: "flex", alignItems: "center", gap: "4px", border: "1.5px solid #fce7f3" }}>
+                              <Globe size={12} strokeWidth={3} />
+                              <span style={{ opacity: 0.7, marginRight: "1px" }}>IG:</span>
+                              <a 
+                                href={`https://instagram.com/${item.instagram}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                style={{ color: "inherit", textDecoration: "none" }}
+                              >
+                                @{item.instagram}
+                              </a>
+                           </div>
+                        )}
                       </div>
                     </div>
                     {/* QR Code for Printing */}
@@ -402,7 +481,36 @@ export default function GenerusKatalogPage() {
                       <Calendar size={11} className="bit-icon" />
                       <div>
                         <span className="bit-label">TTL</span>
-                        <p className="bit-value">{item.tempatLahir || "-"}, {item.tanggalLahir || "-"}</p>
+                        <p className="bit-value truncate-compact">{item.tempatLahir || "-"}, {item.tanggalLahir || "-"}</p>
+                      </div>
+                    </div>
+                    {["admin", "generus", "admin_romantic_room", "tim_pnkb", "pengurus_daerah"].includes(myProfile?.role || "") && (
+                      <div className="info-bit">
+                        <User size={11} className="bit-icon" />
+                        <div>
+                          <span className="bit-label">Umur</span>
+                          <p className="bit-value">
+                            {(() => {
+                              if (!item.tanggalLahir) return "-";
+                              const birthDate = new Date(item.tanggalLahir);
+                              if (isNaN(birthDate.getTime())) return "-";
+                              const today = new Date();
+                              let age = today.getFullYear() - birthDate.getFullYear();
+                              const m = today.getMonth() - birthDate.getMonth();
+                              if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                                age--;
+                              }
+                              return age + " Tahun";
+                            })()}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    <div className="info-bit">
+                      <Heart size={11} className="bit-icon text-pink-500" />
+                      <div>
+                        <span className="bit-label">Status</span>
+                        <p className="bit-value">{item.statusNikah || "Belum Menikah"}</p>
                       </div>
                     </div>
                     <div className="info-bit">
@@ -412,19 +520,30 @@ export default function GenerusKatalogPage() {
                         <p className="bit-value">{item.suku || "-"}</p>
                       </div>
                     </div>
-                    <div className="info-bit">
-                      <Heart size={11} className="bit-icon text-pink-500" />
-                      <div>
-                        <span className="bit-label">Status</span>
-                        <p className="bit-value">{item.statusNikah || "Belum Menikah"}</p>
-                      </div>
-                    </div>
                     {["admin", "kmm_daerah", "admin_romantic_room", "tim_pnkb", "pengurus_daerah"].includes(myProfile?.role || "") && (
                       <div className="info-bit">
                         <Phone size={11} className="bit-icon" />
                         <div>
                           <span className="bit-label">Kontak</span>
                           <p className="bit-value">{item.noTelp || "-"}</p>
+                        </div>
+                      </div>
+                    )}
+                    {["admin", "generus", "admin_romantic_room", "tim_pnkb", "pengurus_daerah"].includes(myProfile?.role || "") && item.instagram && (
+                      <div className="info-bit">
+                        <Globe size={11} className="bit-icon" stroke="#e1306c" />
+                        <div>
+                          <span className="bit-label">Instagram</span>
+                          <p className="bit-value">
+                            <a 
+                              href={`https://instagram.com/${item.instagram}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              style={{ color: "inherit", textDecoration: "none" }}
+                            >
+                              @{item.instagram}
+                            </a>
+                          </p>
                         </div>
                       </div>
                     )}

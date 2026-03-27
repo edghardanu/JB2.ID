@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { generus, users, desa, kelompok, absensi } from "@/lib/schema";
+import { generus, users, desa, kelompok, absensi, mandiri, mandiriDesa, mandiriKelompok } from "@/lib/schema";
 import { eq, or } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
 
@@ -35,13 +35,21 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         makananMinumanFavorit: generus.makananMinumanFavorit,
         suku: generus.suku,
         foto: generus.foto,
+        instagram: generus.instagram,
         role: users.role,
         createdAt: generus.createdAt,
+        nomorUrut: mandiri.nomorUrut,
+        mandiriDesaNama: mandiriDesa.nama,
+        mandiriKelompokNama: mandiriKelompok.nama,
+        kota: mandiriDesa.kota,
       })
       .from(generus)
       .leftJoin(desa, eq(generus.desaId, desa.id))
       .leftJoin(kelompok, eq(generus.kelompokId, kelompok.id))
       .leftJoin(users, eq(generus.id, users.generusId))
+      .leftJoin(mandiri, eq(generus.id, mandiri.generusId))
+      .leftJoin(mandiriDesa, eq(generus.mandiriDesaId, mandiriDesa.id))
+      .leftJoin(mandiriKelompok, eq(generus.mandiriKelompokId, mandiriKelompok.id))
       .where(or(eq(generus.id, id), eq(generus.nomorUnik, id)))
       .limit(1);
 
@@ -93,7 +101,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       nama, tempatLahir, tanggalLahir, jenisKelamin, kategoriUsia, 
       alamat, noTelp, pendidikan, pekerjaan, statusNikah, 
       desaId, kelompokId, mandiriDesaId, mandiriKelompokId,
-      hobi, makananMinumanFavorit, suku, foto 
+      hobi, makananMinumanFavorit, suku, foto, instagram 
     } = body;
 
     await db
@@ -117,18 +125,30 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         makananMinumanFavorit,
         suku,
         foto,
+        instagram,
         updatedAt: new Date().toISOString(),
       })
       .where(eq(generus.id, targetId));
 
-    // Sinkronkan nama, desaId, dan kelompokId ke tabel users agar tidak terjadi desync
-    await db.update(users).set({ 
+    // Sinkronkan nama, desaId, kelompokId, dan EMAIL ke tabel users
+    const { email: customEmail, password: customPassword } = body;
+    const updateData: any = { 
       name: nama,
       desaId: desaId ? Number(desaId) : null,
       kelompokId: kelompokId ? Number(kelompokId) : null,
       mandiriDesaId: mandiriDesaId ? Number(mandiriDesaId) : null,
       mandiriKelompokId: mandiriKelompokId ? Number(mandiriKelompokId) : null,
-    }).where(eq(users.generusId, targetId));
+    };
+
+    if (customEmail) {
+       updateData.email = customEmail.toLowerCase();
+    }
+    if (customPassword) {
+       const bcrypt = await import("bcryptjs");
+       updateData.passwordHash = await bcrypt.hash(customPassword, 10);
+    }
+
+    await db.update(users).set(updateData).where(eq(users.generusId, targetId));
 
     // Kembalikan data terbaru (dengan join desa & kelompok) agar frontend langsung sinkron
     const updated = await db
@@ -153,6 +173,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         makananMinumanFavorit: generus.makananMinumanFavorit,
         suku: generus.suku,
         foto: generus.foto,
+        instagram: generus.instagram,
         role: users.role,
         createdAt: generus.createdAt,
       })

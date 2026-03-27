@@ -36,7 +36,7 @@ export default function GenerusPage() {
   const [regTitle, setRegTitle] = useState("");
   const [regDesc, setRegDesc] = useState("");
   
-  const limit = 20;
+  const limit = 10;
 
   // Fetch user role and filter options
   useEffect(() => {
@@ -50,14 +50,15 @@ export default function GenerusPage() {
     });
 
     const fetchSettings = async () => {
-        const [d1, d2, d3] = await Promise.all([
-            fetch("/api/mandiri/settings?key=generus_registration_deadline").then(r => r.json()),
-            fetch("/api/mandiri/settings?key=generus_registration_title").then(r => r.json()),
-            fetch("/api/mandiri/settings?key=generus_registration_description").then(r => r.json())
-        ]);
-        setDeadline(d1.value || "");
-        setRegTitle(d2.value || "");
-        setRegDesc(d3.value || "");
+        try {
+            const res = await fetch("/api/settings");
+            const s = await res.json();
+            setDeadline(s.generus_registration_deadline || "");
+            setRegTitle(s.generus_registration_title || "");
+            setRegDesc(s.generus_registration_description || "");
+        } catch (e) {
+            console.error("Failed to fetch unified settings:", e);
+        }
     };
     fetchSettings();
   }, []);

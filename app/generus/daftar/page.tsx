@@ -15,6 +15,8 @@ export default function GenerusDaftarPage() {
     tanggalLahir: "",
     alamat: "",
     noTelp: "",
+    email: "",
+    password: "",
     pendidikan: "",
     pekerjaan: "",
     statusNikah: "Belum Menikah",
@@ -234,6 +236,16 @@ export default function GenerusDaftarPage() {
                         <p style={{ fontSize: "10.5px", color: "var(--text-muted)", marginTop: "4px" }}>
                             Contoh Format Penulisan: Raka Gladhi Pratama (Tanpa disingkat dan huruf kapital pada setiap awal kata)
                         </p>
+                    </div>
+
+                    <div className="form-group">
+                        <label className="form-label">Email <span className="required">*</span></label>
+                        <input name="email" type="email" className="form-control" value={form.email} onChange={handleChange} required placeholder="Masukkan alamat email aktif" />
+                    </div>
+
+                    <div className="form-group">
+                        <label className="form-label">Password <span className="required">*</span></label>
+                        <input name="password" type="password" className="form-control" value={form.password} onChange={handleChange} required placeholder="Masukkan password untuk login" />
                     </div>
 
                     <div className="form-row">
